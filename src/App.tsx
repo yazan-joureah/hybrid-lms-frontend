@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import { NavContext, type Role, type Page } from './context/NavContext'
+import { AuthApiProvider } from './context/AuthApiContext'
 import Layout from './components/Layout'
 
 // Public pages
@@ -7,6 +8,7 @@ import Landing from './pages/Landing'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import ForgotPassword from './pages/ForgotPassword'
+import GoogleCallback from './pages/GoogleCallback'
 
 // Student pages
 import StudentDashboard from './pages/student/Dashboard'
@@ -35,6 +37,17 @@ const defaultPages: Record<Role, Page> = {
   superadmin: 'admin-dashboard',
 }
 
+// لما Google يرجع المستخدم عالموقع بعد تسجيل الدخول، بيكون فيه ?code=...&state=...
+// بالرابط. بما إنه التطبيق ما بيستخدم React Router (بس page state)، لازم نتأكد
+// من هاد الشي عند أول تحميل للصفحة ونفتح صفحة google-callback مباشرة.
+function getInitialPage(): Page {
+  const params = new URLSearchParams(window.location.search)
+  if (params.get('code') && params.get('state')) {
+    return 'google-callback'
+  }
+  return 'landing'
+}
+
 function PageContent({ page }: { page: Page }) {
   switch (page) {
     case 'student-dashboard': return <StudentDashboard />
@@ -58,7 +71,7 @@ function PageContent({ page }: { page: Page }) {
 }
 
 export default function App() {
-  const [page, setPage] = useState<Page>('landing')
+  const [page, setPage] = useState<Page>(getInitialPage)
   const [role, setRoleState] = useState<Role>('student')
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
@@ -113,21 +126,25 @@ export default function App() {
 
   if (!isAuthenticated) {
     return (
-      <NavContext.Provider value={ctx}>
-        {page === 'landing' && <Landing />}
-        {page === 'login' && <Login />}
-        {page === 'register' && <Register />}
-        {page === 'forgot-password' && <ForgotPassword />}
-
-      </NavContext.Provider>
+      <AuthApiProvider>
+        <NavContext.Provider value={ctx}>
+          {page === 'landing' && <Landing />}
+          {page === 'login' && <Login />}
+          {page === 'register' && <Register />}
+          {page === 'forgot-password' && <ForgotPassword />}
+          {page === 'google-callback' && <GoogleCallback />}
+        </NavContext.Provider>
+      </AuthApiProvider>
     )
   }
 
   return (
-    <NavContext.Provider value={ctx}>
-      <Layout>
-        <PageContent page={page} />
-      </Layout>
-    </NavContext.Provider>
+    <AuthApiProvider>
+      <NavContext.Provider value={ctx}>
+        <Layout>
+          <PageContent page={page} />
+        </Layout>
+      </NavContext.Provider>
+    </AuthApiProvider>
   )
 }

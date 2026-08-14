@@ -1,11 +1,14 @@
 import { useState } from 'react'
-import { useNav, type Role } from '../context/NavContext'
+import { useNav } from '../context/NavContext'
+import { useAuthApi, normalizeRole } from '../context/AuthApiContext'
 import EdujarLogo from '../components/EdujarLogo'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 
 export default function Login() {
-  const { navigate, login, setUserName, setUserEmail, setUserPhone, setUserDob, setUserBio, setUserGender } = useNav()
+  const { navigate, login, setUserName, setUserEmail } = useNav()
+  const { login: apiLogin, verifyMfa: apiVerifyMfa, googleLogin, getErrorMessage } = useAuthApi()
+
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPass, setShowPass] = useState(false)
@@ -14,9 +17,21 @@ export default function Login() {
   const [emailTouched, setEmailTouched] = useState(false)
   const [error, setError] = useState('')
 
+  // خطوة التحقق الثنائي (MFA) — بتظهر بس إذا الباك طلبها بعد اللوجن
+  const [mfaStep, setMfaStep] = useState(false)
+  const [mfaDigits, setMfaDigits] = useState(['', '', '', '', '', ''])
+  const [mfaError, setMfaError] = useState('')
+
   const emailValid = EMAIL_RE.test(email)
 
-  const handleLogin = () => {
+  const applyLoggedInUser = (user: any) => {
+    const role = normalizeRole(user?.role)
+    setUserName(user?.full_name || email.trim().split('@')[0] || 'مستخدم')
+    setUserEmail(user?.email || email.trim().toLowerCase())
+    login(role)
+  }
+
+  const handleLogin = async () => {
     setEmailTouched(true)
     setError('')
 
@@ -30,32 +45,46 @@ export default function Login() {
     }
 
     setLoading(true)
-    setTimeout(() => {
+    try {
+      const result = await apiLogin(email.trim().toLowerCase(), password)
+      if (result.mfaRequired) {
+        setMfaStep(true)
+      } else if (result.user) {
+        applyLoggedInUser(result.user)
+      }
+    } catch (err) {
+      setError(getErrorMessage(err))
+    } finally {
       setLoading(false)
+    }
+  }
 
-      // Recognize a name and role saved during registration, if this email matches.
-      let recognizedName = ''
-      let recognizedRole: Role = 'student'
-      try {
-        const stored = localStorage.getItem('edujar_user')
-        if (stored) {
-          const parsed = JSON.parse(stored)
-          if (parsed.email && parsed.email.toLowerCase() === email.trim().toLowerCase()) {
-            recognizedName = parsed.name
-            if (parsed.phone) setUserPhone(parsed.phone)
-            if (parsed.dob) setUserDob(parsed.dob)
-            if (parsed.bio) setUserBio(parsed.bio)
-            if (parsed.gender) setUserGender(parsed.gender)
-            if (parsed.role) recognizedRole = parsed.role
-          }
-        }
-      } catch {}
+  const handleMfaDigit = (idx: number, val: string) => {
+    if (val.length > 1) return
+    const next = [...mfaDigits]
+    next[idx] = val.replace(/[^0-9]/g, '')
+    setMfaDigits(next)
+    if (val && idx < 5) {
+      document.getElementById(`login-mfa-${idx + 1}`)?.focus()
+    }
+  }
 
-      const normalizedEmail = email.trim().toLowerCase()
-      setUserName(recognizedName || normalizedEmail.split('@')[0] || 'مستخدم')
-      setUserEmail(normalizedEmail)
-      login(recognizedRole)
-    }, 800)
+  const handleMfaVerify = async () => {
+    const code = mfaDigits.join('')
+    if (code.length !== 6) {
+      setMfaError('أدخل الرمز المكوّن من 6 أرقام كاملاً')
+      return
+    }
+    setMfaError('')
+    setLoading(true)
+    try {
+      const result = await apiVerifyMfa(code)
+      if (result.user) applyLoggedInUser(result.user)
+    } catch (err) {
+      setMfaError(getErrorMessage(err))
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -87,112 +116,162 @@ export default function Login() {
           border: '1px solid rgba(255,255,255,0.1)', borderRadius: 24,
           padding: '40px 36px', boxShadow: '0 24px 80px rgba(0,0,0,0.55)',
         }}>
-          {/* Icon */}
-          <div style={{ textAlign: 'center', marginBottom: 24 }}>
-            <div style={{
-              width: 60, height: 60, borderRadius: '50%',
-              border: '2px dashed rgba(255,255,255,0.25)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              margin: '0 auto 16px', fontSize: 26,
-            }}>☀</div>
-            <h1 style={{ fontSize: 24, fontWeight: 800, margin: '0 0 6px' }}>
-              مرحباً بعودتك إلى <span className="gradient-text">Edujar!</span>
-            </h1>
-            <p style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.5)', margin: 0 }}>
-              سجّل دخولك للوصول إلى كورساتك
-            </p>
-          </div>
-
-          {/* Form */}
-          <div style={{ marginBottom: 16 }}>
-            <label className="form-label">البريد الإلكتروني</label>
-            <input
-              className="form-input"
-              type="email"
-              placeholder="أدخل بريدك الإلكتروني"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              onBlur={() => setEmailTouched(true)}
-              style={{ borderColor: emailTouched && email && !emailValid ? '#ef4444' : undefined }}
-            />
-            {emailTouched && email && !emailValid && (
-              <div style={{ fontSize: 12, color: '#f87171', marginTop: 5 }}>يرجى إدخال بريد إلكتروني صحيح (مثال: name@example.com)</div>
-            )}
-          </div>
-
-          <div style={{ marginBottom: 8 }}>
-            <label className="form-label">كلمة المرور</label>
-            <div style={{ position: 'relative' }}>
-              <input
-                className="form-input"
-                type={showPass ? 'text' : 'password'}
-                placeholder="••••••••"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                style={{ paddingLeft: 44 }}
-              />
-              <button
-                onClick={() => setShowPass(!showPass)}
-                style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontSize: 16 }}
-              >{showPass ? '🙈' : '👁'}</button>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>
-              <div
-                onClick={() => setRemember(!remember)}
-                style={{
-                  width: 18, height: 18, borderRadius: 5,
-                  background: remember ? 'linear-gradient(135deg, #7c3aed, #a855f7)' : 'transparent',
-                  border: remember ? 'none' : '1.5px solid rgba(255,255,255,0.25)',
+          {!mfaStep ? (
+            <>
+              {/* Icon */}
+              <div style={{ textAlign: 'center', marginBottom: 24 }}>
+                <div style={{
+                  width: 60, height: 60, borderRadius: '50%',
+                  border: '2px dashed rgba(255,255,255,0.25)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  cursor: 'pointer', flexShrink: 0,
-                }}
-              >{remember && <span style={{ color: '#fff', fontSize: 11, fontWeight: 700 }}>✓</span>}</div>
-              تذكرني
-            </label>
-            <button className="btn-ghost" style={{ fontSize: 13, color: '#a855f7', padding: '4px 8px' }} onClick={() => navigate('forgot-password')}>
-              نسيت كلمة المرور؟
-            </button>
-          </div>
+                  margin: '0 auto 16px', fontSize: 26,
+                }}>☀</div>
+                <h1 style={{ fontSize: 24, fontWeight: 800, margin: '0 0 6px' }}>
+                  مرحباً بعودتك إلى <span className="gradient-text">Edujar!</span>
+                </h1>
+                <p style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.5)', margin: 0 }}>
+                  سجّل دخولك للوصول إلى كورساتك
+                </p>
+              </div>
 
-          {error && (
-            <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#f87171', marginBottom: 16 }}>
-              ⚠️ {error}
-            </div>
+              {/* Form */}
+              <div style={{ marginBottom: 16 }}>
+                <label className="form-label">البريد الإلكتروني</label>
+                <input
+                  className="form-input"
+                  type="email"
+                  placeholder="أدخل بريدك الإلكتروني"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  onBlur={() => setEmailTouched(true)}
+                  style={{ borderColor: emailTouched && email && !emailValid ? '#ef4444' : undefined }}
+                />
+                {emailTouched && email && !emailValid && (
+                  <div style={{ fontSize: 12, color: '#f87171', marginTop: 5 }}>يرجى إدخال بريد إلكتروني صحيح (مثال: name@example.com)</div>
+                )}
+              </div>
+
+              <div style={{ marginBottom: 8 }}>
+                <label className="form-label">كلمة المرور</label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    className="form-input"
+                    type={showPass ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    style={{ paddingLeft: 44 }}
+                  />
+                  <button
+                    onClick={() => setShowPass(!showPass)}
+                    style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontSize: 16 }}
+                  >{showPass ? '🙈' : '👁'}</button>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>
+                  <div
+                    onClick={() => setRemember(!remember)}
+                    style={{
+                      width: 18, height: 18, borderRadius: 5,
+                      background: remember ? 'linear-gradient(135deg, #7c3aed, #a855f7)' : 'transparent',
+                      border: remember ? 'none' : '1.5px solid rgba(255,255,255,0.25)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      cursor: 'pointer', flexShrink: 0,
+                    }}
+                  >{remember && <span style={{ color: '#fff', fontSize: 11, fontWeight: 700 }}>✓</span>}</div>
+                  تذكرني
+                </label>
+                <button className="btn-ghost" style={{ fontSize: 13, color: '#a855f7', padding: '4px 8px' }} onClick={() => navigate('forgot-password')}>
+                  نسيت كلمة المرور؟
+                </button>
+              </div>
+
+              {error && (
+                <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#f87171', marginBottom: 16 }}>
+                  ⚠️ {error}
+                </div>
+              )}
+
+              <button
+                className="btn-primary"
+                style={{ width: '100%', justifyContent: 'center', padding: '13px', fontSize: 16, marginBottom: 16 }}
+                onClick={handleLogin}
+                disabled={loading}
+              >
+                {loading ? '...جارٍ تسجيل الدخول' : 'تسجيل الدخول'}
+              </button>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
+                <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)' }}>أو</span>
+                <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
+              </div>
+
+              <button
+                onClick={googleLogin}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+                  background: 'rgba(255,255,255,0.06)', border: '1.5px solid rgba(255,255,255,0.12)',
+                  borderRadius: 9999, padding: '12px', color: '#fff', fontSize: 15, fontWeight: 600,
+                  cursor: 'pointer', fontFamily: 'inherit', transition: 'background 0.15s',
+                }}>
+                <span>G</span> تسجيل الدخول بـ Google
+              </button>
+
+              <div style={{ textAlign: 'center', marginTop: 20, fontSize: 13.5, color: 'rgba(255,255,255,0.5)' }}>
+                ليس لديك حساب؟{' '}
+                <button className="btn-ghost" style={{ color: '#a855f7', fontWeight: 700, fontSize: 13.5, padding: '2px 4px' }} onClick={() => navigate('register')}>
+                  سجّل الآن
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* خطوة التحقق الثنائي (MFA) */}
+              <div style={{ textAlign: 'center', marginBottom: 24 }}>
+                <div style={{ fontSize: 36, marginBottom: 12 }}>🔒</div>
+                <h1 style={{ fontSize: 22, fontWeight: 800, margin: '0 0 8px' }}>التحقق بخطوتين</h1>
+                <p style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.5)', margin: 0 }}>أدخل الرمز المكوّن من 6 أرقام من تطبيق المصادقة</p>
+              </div>
+
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginBottom: 6 }} dir="ltr">
+                {mfaDigits.map((v, i) => (
+                  <input
+                    key={i}
+                    id={`login-mfa-${i}`}
+                    value={v}
+                    onChange={e => handleMfaDigit(i, e.target.value)}
+                    maxLength={1}
+                    disabled={loading}
+                    style={{
+                      width: 48, height: 54, borderRadius: 12,
+                      background: 'rgba(255,255,255,0.07)',
+                      border: `1.5px solid ${mfaError ? '#ef4444' : v ? '#7c3aed' : 'rgba(255,255,255,0.15)'}`,
+                      color: '#fff', fontSize: 22, fontWeight: 700,
+                      textAlign: 'center', outline: 'none', fontFamily: 'inherit',
+                      transition: 'border-color 0.15s',
+                    }}
+                  />
+                ))}
+              </div>
+
+              {mfaError && <div style={{ textAlign: 'center', color: '#f87171', fontSize: 13, marginBottom: 12, marginTop: 4 }}>{mfaError}</div>}
+
+              <button
+                className="btn-primary"
+                style={{ width: '100%', justifyContent: 'center', padding: '13px', fontSize: 15, marginTop: 20, marginBottom: 10 }}
+                onClick={handleMfaVerify}
+                disabled={loading}
+              >
+                {loading ? '...جارٍ التحقق' : 'تحقق ودخول'}
+              </button>
+              <button className="btn-ghost" style={{ width: '100%', justifyContent: 'center' }} onClick={() => { setMfaStep(false); setMfaDigits(['', '', '', '', '', '']); setMfaError('') }}>
+                ← رجوع لتسجيل الدخول
+              </button>
+            </>
           )}
-
-          <button
-            className="btn-primary"
-            style={{ width: '100%', justifyContent: 'center', padding: '13px', fontSize: 16, marginBottom: 16 }}
-            onClick={handleLogin}
-            disabled={loading}
-          >
-            {loading ? '...جارٍ تسجيل الدخول' : 'تسجيل الدخول'}
-          </button>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-            <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
-            <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)' }}>أو</span>
-            <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
-          </div>
-
-          <button style={{
-            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-            background: 'rgba(255,255,255,0.06)', border: '1.5px solid rgba(255,255,255,0.12)',
-            borderRadius: 9999, padding: '12px', color: '#fff', fontSize: 15, fontWeight: 600,
-            cursor: 'pointer', fontFamily: 'inherit', transition: 'background 0.15s',
-          }}>
-            <span>G</span> تسجيل الدخول بـ Google
-          </button>
-
-          <div style={{ textAlign: 'center', marginTop: 20, fontSize: 13.5, color: 'rgba(255,255,255,0.5)' }}>
-            ليس لديك حساب؟{' '}
-            <button className="btn-ghost" style={{ color: '#a855f7', fontWeight: 700, fontSize: 13.5, padding: '2px 4px' }} onClick={() => navigate('register')}>
-              سجّل الآن
-            </button>
-          </div>
         </div>
       </div>
 

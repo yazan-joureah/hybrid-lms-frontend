@@ -1,11 +1,14 @@
 import { useState } from 'react'
 import { useNav } from '../context/NavContext'
+import { useAuthApi, getCodeErrorMessage } from '../context/AuthApiContext'
 import EdujarLogo from '../components/EdujarLogo'
 
 type Step = 'email' | 'otp' | 'newpass' | 'success'
 
 export default function ForgotPassword() {
   const { navigate } = useNav()
+  const { forgotPassword, resetPassword, getErrorMessage } = useAuthApi()
+
   const [step, setStep] = useState<Step>('email')
   const [email, setEmail] = useState('')
   const [otp, setOtp] = useState(['', '', '', '', '', ''])
@@ -13,7 +16,9 @@ export default function ForgotPassword() {
   const [confirmPass, setConfirmPass] = useState('')
   const [timer, setTimer] = useState(60)
   const [timerActive, setTimerActive] = useState(false)
-  const [otpError, setOtpError] = useState(false)
+  const [otpError, setOtpError] = useState('')
+  const [passError, setPassError] = useState('')
+  const [loading, setLoading] = useState(false)
 
   const startTimer = () => {
     setTimerActive(true)
@@ -25,12 +30,27 @@ export default function ForgotPassword() {
     }, 1000)
   }
 
-  const handleEmailSubmit = () => { setStep('otp'); startTimer() }
+  const handleEmailSubmit = async () => {
+    if (!email.trim()) return
+    setLoading(true)
+    try {
+      await forgotPassword(email.trim().toLowerCase())
+      setStep('otp')
+      setTimer(60)
+      startTimer()
+    } catch (err) {
+      // الباك بيرجع نفس الرسالة سواء الإيميل موجود أو لأ (لأسباب أمنية)،
+      // فبنعرض أي خطأ فعلي بس (شبكة، سيرفر...) وبنكمل بشكل طبيعي غير هيك
+      setOtpError(getErrorMessage(err))
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleOTPInput = (idx: number, val: string) => {
     if (val.length > 1) return
     const next = [...otp]
-    next[idx] = val
+    next[idx] = val.replace(/[^0-9]/g, '')
     setOtp(next)
     if (val && idx < 5) {
       const nextEl = document.getElementById(`otp-${idx + 1}`)
@@ -38,10 +58,58 @@ export default function ForgotPassword() {
     }
   }
 
-  const handleVerifyOTP = () => {
-    if (otp.join('') === '000000') { setOtpError(true); return }
-    setOtpError(false)
+  // ما في endpoint مستقل للتحقق من الرمز لحاله بالباك — التحقق الفعلي بيصير
+  // مع إرسال كلمة المرور الجديدة بخطوة newpass. هون بس منتأكد إنه المستخدم
+  // دخل 6 أرقام قبل ما ينتقل.
+  const handleContinueToNewPass = () => {
+    if (otp.join('').length !== 6) {
+      setOtpError('أدخل الرمز المكوّن من 6 أرقام كاملاً')
+      return
+    }
+    setOtpError('')
     setStep('newpass')
+  }
+
+  const handleResetSubmit = async () => {
+    if (newPass !== confirmPass) {
+      setPassError('كلمتا المرور غير متطابقتين')
+      return
+    }
+    if (newPass.length < 6) {
+      setPassError('كلمة المرور يجب أن تكون 6 أحرف على الأقل')
+      return
+    }
+    setPassError('')
+    setLoading(true)
+    try {
+      await resetPassword(email.trim().toLowerCase(), otp.join(''), newPass)
+      setStep('success')
+    } catch (err: any) {
+      // نفس منطق كود صاحبك بالضبط: يشيك على كود الخطأ (INVALID_CODE / CODE_EXPIRED / TOO_MANY_ATTEMPTS)
+      const errorCode = err?.response?.data?.error?.code
+      if (errorCode === 'INVALID_CODE' || errorCode === 'CODE_EXPIRED' || errorCode === 'TOO_MANY_ATTEMPTS') {
+        setStep('otp')
+        setOtpError(getCodeErrorMessage(err, ''))
+      } else {
+        setPassError(getErrorMessage(err))
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleResendCode = async () => {
+    if (timerActive || loading) return
+    setLoading(true)
+    try {
+      await forgotPassword(email.trim().toLowerCase())
+      setTimer(60)
+      startTimer()
+    } catch (err) {
+      setOtpError(getErrorMessage(err))
+    } finally {
+      setLoading(false)
+    }
   }
 
   const strength = newPass.length === 0 ? 0 : newPass.length < 6 ? 1 : newPass.length < 10 ? 2 : 3
@@ -83,8 +151,13 @@ export default function ForgotPassword() {
                 <label className="form-label">البريد الإلكتروني</label>
                 <input className="form-input" type="email" placeholder="أدخل بريدك الإلكتروني" value={email} onChange={e => setEmail(e.target.value)} />
               </div>
-              <button className="btn-primary" style={{ width: '100%', justifyContent: 'center', padding: '13px', fontSize: 15, marginBottom: 14 }} onClick={handleEmailSubmit}>
-                إرسال رمز التحقق
+              {otpError && (
+                <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#f87171', marginBottom: 16 }}>
+                  ⚠️ {otpError}
+                </div>
+              )}
+              <button className="btn-primary" style={{ width: '100%', justifyContent: 'center', padding: '13px', fontSize: 15, marginBottom: 14 }} onClick={handleEmailSubmit} disabled={loading}>
+                {loading ? '...جارٍ الإرسال' : 'إرسال رمز التحقق'}
               </button>
               <button className="btn-ghost" style={{ width: '100%', justifyContent: 'center' }} onClick={() => navigate('login')}>
                 ← العودة لتسجيل الدخول
@@ -99,7 +172,7 @@ export default function ForgotPassword() {
                 <h1 style={{ fontSize: 22, fontWeight: 800, margin: '0 0 8px' }}>أدخل رمز التحقق</h1>
                 <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', margin: 0 }}>
                   أرسلنا رمزاً من 6 أرقام إلى<br />
-                  <span style={{ color: '#a855f7', fontWeight: 600 }}>{email || 'ahmed@example.com'}</span>
+                  <span style={{ color: '#a855f7', fontWeight: 600 }}>{email}</span>
                 </p>
               </div>
 
@@ -123,16 +196,16 @@ export default function ForgotPassword() {
                 ))}
               </div>
 
-              {otpError && <div style={{ textAlign: 'center', color: '#f87171', fontSize: 13, marginBottom: 12, marginTop: 4 }}>رمز التحقق غير صحيح. حاول مرة أخرى.</div>}
+              {otpError && <div style={{ textAlign: 'center', color: '#f87171', fontSize: 13, marginBottom: 12, marginTop: 4 }}>{otpError}</div>}
 
               <div style={{ textAlign: 'center', marginBottom: 20, marginTop: 12, fontSize: 13, color: 'rgba(255,255,255,0.5)' }}>
                 {timerActive
                   ? <>انتهاء صلاحية الرمز خلال <span style={{ color: '#a855f7', fontWeight: 600 }}>{timer}s</span></>
-                  : <button className="btn-ghost" style={{ fontSize: 13, color: '#a855f7', padding: '4px 8px' }} onClick={() => { startTimer(); setTimer(60) }}>إعادة إرسال الرمز</button>
+                  : <button className="btn-ghost" style={{ fontSize: 13, color: '#a855f7', padding: '4px 8px' }} onClick={handleResendCode} disabled={loading}>إعادة إرسال الرمز</button>
                 }
               </div>
 
-              <button className="btn-primary" style={{ width: '100%', justifyContent: 'center', padding: '13px', fontSize: 15, marginBottom: 10 }} onClick={handleVerifyOTP}>
+              <button className="btn-primary" style={{ width: '100%', justifyContent: 'center', padding: '13px', fontSize: 15, marginBottom: 10 }} onClick={handleContinueToNewPass}>
                 تحقق من الرمز
               </button>
               <button className="btn-ghost" style={{ width: '100%', justifyContent: 'center' }} onClick={() => setStep('email')}>← رجوع</button>
@@ -160,12 +233,19 @@ export default function ForgotPassword() {
                   </div>
                 )}
               </div>
-              <div style={{ marginBottom: 24 }}>
+              <div style={{ marginBottom: 16 }}>
                 <label className="form-label">تأكيد كلمة المرور</label>
                 <input className="form-input" type="password" placeholder="••••••••" value={confirmPass} onChange={e => setConfirmPass(e.target.value)} />
               </div>
-              <button className="btn-primary" style={{ width: '100%', justifyContent: 'center', padding: '13px', fontSize: 15 }} onClick={() => setStep('success')}>
-                حفظ كلمة المرور
+
+              {passError && (
+                <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#f87171', marginBottom: 16 }}>
+                  ⚠️ {passError}
+                </div>
+              )}
+
+              <button className="btn-primary" style={{ width: '100%', justifyContent: 'center', padding: '13px', fontSize: 15 }} onClick={handleResetSubmit} disabled={loading}>
+                {loading ? '...جارٍ الحفظ' : 'حفظ كلمة المرور'}
               </button>
             </>
           )}

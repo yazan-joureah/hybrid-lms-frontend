@@ -3,7 +3,7 @@ import { createContext, useContext } from 'react'
 export type Role = 'student' | 'instructor' | 'admin' | 'superadmin'
 
 export type Page =
-  | 'landing' | 'login' | 'register' | 'forgot-password'
+  | 'landing' | 'login' | 'register' | 'forgot-password' | 'google-callback'
   | 'student-dashboard' | 'course-catalog' | 'my-courses' | 'assignments'
   | 'live-class' | 'exams' | 'certificates' | 'ai-assistant' | 'profile'
   | 'instructor-dashboard' | 'course-builder' | 'attendance-manager'
