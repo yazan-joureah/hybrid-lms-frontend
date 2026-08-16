@@ -3,10 +3,10 @@ import { createContext, useContext } from 'react'
 export type Role = 'student' | 'instructor' | 'admin' | 'superadmin'
 
 export type Page =
-  | 'landing' | 'login' | 'register' | 'forgot-password' | 'google-callback'
+  | 'landing' | 'login' | 'register' | 'forgot-password'
   | 'student-dashboard' | 'course-catalog' | 'my-courses' | 'assignments'
   | 'live-class' | 'exams' | 'certificates' | 'ai-assistant' | 'profile'
-  | 'instructor-dashboard' | 'course-builder' | 'attendance-manager'
+  | 'instructor-dashboard' | 'instructor-setup' | 'course-builder' | 'attendance-manager'
   | 'grading-manager' | 'live-controller' | 'quiz-creator' | 'instructor-analytics'
   | 'admin-dashboard' | 'user-management' | 'kyc-review' | 'course-approval'
   | 'refunds' | 'platform-analytics'
@@ -34,30 +34,39 @@ interface NavContextType {
   setUserBio: (b: string) => void
   userGender: 'male' | 'female'
   setUserGender: (g: 'male' | 'female') => void
+  kycStatus: string
+  mfaEnabled: boolean
+  instructorSetupIncomplete: boolean
+  refreshUser: () => Promise<void>;
 }
 
 export const NavContext = createContext<NavContextType>({
   page: 'landing',
-  navigate: () => {},
+  navigate: () => { },
   role: 'student',
-  setRole: () => {},
+  setRole: () => { },
   isAuthenticated: false,
-  login: () => {},
-  logout: () => {},
+  login: () => { },
+  logout: () => { },
   notifOpen: false,
-  setNotifOpen: () => {},
+  setNotifOpen: () => { },
   userName: '',
-  setUserName: () => {},
+  setUserName: () => { },
   userEmail: '',
-  setUserEmail: () => {},
+  setUserEmail: () => { },
   userPhone: '',
-  setUserPhone: () => {},
+  setUserPhone: () => { },
   userDob: '',
-  setUserDob: () => {},
+  setUserDob: () => { },
   userBio: '',
-  setUserBio: () => {},
+  setUserBio: () => { },
   userGender: 'male',
-  setUserGender: () => {},
+  setUserGender: () => { },
+  kycStatus: 'not_submitted',
+  mfaEnabled: false,
+  instructorSetupIncomplete: false,
+  refreshUser: async () => { },
+
 })
 
 export const useNav = () => useContext(NavContext)

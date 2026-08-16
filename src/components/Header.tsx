@@ -25,7 +25,7 @@ interface HeaderProps {
 }
 
 export default function Header({ onMenuClick }: HeaderProps) {
-  const { page, navigate, notifOpen, setNotifOpen, logout, userName } = useNav()
+  const { page, navigate, notifOpen, setNotifOpen, logout, userName, userEmail, role, kycStatus } = useNav()
   const [search, setSearch] = useState('')
   const [profileOpen, setProfileOpen] = useState(false)
   const unreadCount = notifications.filter(n => n.unread).length
@@ -121,8 +121,12 @@ export default function Header({ onMenuClick }: HeaderProps) {
             }}>
               <div style={{ padding: '10px 14px 12px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
                 <div style={{ fontWeight: 600, fontSize: 14 }}>{userName || 'مستخدم'}</div>
-                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>ahmed@example.com</div>
-                <span className="badge badge-success" style={{ marginTop: 6 }}>✓ KYC موثّق</span>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>{userEmail || '—'}</div>
+                {(role === 'student' || role === 'instructor') && (
+                  kycStatus === 'verified'
+                    ? <span className="badge badge-success" style={{ marginTop: 6 }}>✓ KYC موثّق</span>
+                    : <span className="badge" style={{ marginTop: 6, background: 'rgba(245,158,11,0.15)', color: '#fbbf24' }}>⚠ KYC غير مكتمل</span>
+                )}
               </div>
               <button
                 onClick={() => { navigate('profile'); setProfileOpen(false) }}

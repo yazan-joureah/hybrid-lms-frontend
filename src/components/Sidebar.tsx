@@ -24,80 +24,79 @@ const InstructorNav = [
   { icon: '⚙️', label: 'الإعدادات', page: 'profile' },
 ] as const
 
+// عناصر محدودة تُعرض للمدرّس لحد ما يكمّل KYC/MFA — بس صفحة الإعداد والملف الشخصي
+const InstructorSetupNav = [
+  { icon: '🚀', label: 'إكمال الإعداد', page: 'instructor-setup' },
+  { icon: '⚙️', label: 'الإعدادات', page: 'profile' },
+] as const
+
+// قائمة الأدمن — KYC صار تبويب داخل AdminDashboard نفسها، مو رابط منفصل هون
+const AdminNav = [
+  { icon: '⊞', label: 'لوحة التحكم', page: 'admin-dashboard' },
+  { icon: '⚙️', label: 'الإعدادات', page: 'profile' },
+] as const
+
 interface SidebarProps {
   mobileOpen: boolean
   onClose: () => void
 }
 
 export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
-  const { page, navigate, logout, role, userName, userGender } = useNav()
-  const navItems = role === 'instructor' ? InstructorNav : StudentNav
+  const { page, navigate, logout, role, userName, userGender, instructorSetupIncomplete } = useNav()
+
+  const navItems =
+    role === 'instructor'
+      ? (instructorSetupIncomplete ? InstructorSetupNav : InstructorNav)
+      : role === 'admin' || role === 'superadmin'
+        ? AdminNav
+        : StudentNav
+
+  const roleLabel =
+    role === 'instructor' ? 'مدرّس'
+      : role === 'admin' ? 'مشرف'
+        : role === 'superadmin' ? 'مشرف عام'
+          : userGender === 'female' ? 'طالبة' : 'طالب'
 
   return (
     <>
-      {/* Mobile overlay */}
       {mobileOpen && (
-        <div
-          onClick={onClose}
-          style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
-            zIndex: 99, backdropFilter: 'blur(2px)',
-          }}
-        />
+        <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 99, backdropFilter: 'blur(2px)' }} />
       )}
 
       <aside
         style={{
-          position: 'fixed',
-          top: 0,
-          right: 0,
-          width: 'var(--sidebar-width)',
-          height: '100vh',
-          background: 'rgba(12,4,45,0.96)',
-          backdropFilter: 'blur(30px)',
-          borderLeft: '1px solid rgba(255,255,255,0.08)',
-          zIndex: 100,
-          display: 'flex',
-          flexDirection: 'column',
+          position: 'fixed', top: 0, right: 0, width: 'var(--sidebar-width)', height: '100vh',
+          background: 'rgba(12,4,45,0.96)', backdropFilter: 'blur(30px)',
+          borderLeft: '1px solid rgba(255,255,255,0.08)', zIndex: 100,
+          display: 'flex', flexDirection: 'column',
           transition: 'transform 0.3s cubic-bezier(0.4,0,0.2,1)',
           transform: mobileOpen ? 'translateX(0)' : undefined,
         }}
         className="max-[900px]:translate-x-full max-[900px]:hidden"
       >
-        {/* Logo */}
         <div style={{ padding: '18px 18px 14px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
           <EdujarLogo width={130} height={34} />
         </div>
 
-        {/* User info */}
         <div style={{ padding: '12px 18px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-          <div style={{
-            background: 'rgba(255,255,255,0.05)',
-            borderRadius: 10,
-            padding: '8px 12px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-          }}>
-            <div style={{
-              width: 34, height: 34, borderRadius: '50%',
-              background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 14, fontWeight: 700, color: '#fff', flexShrink: 0,
-            }}>{(userName || 'أ')[0]}</div>
+          <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 10, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg, #7c3aed, #a855f7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+              {(userName || 'أ')[0]}
+            </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 13.5, fontWeight: 600, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{userName || 'مستخدم'}</div>
-              <div style={{
-                fontSize: 11, fontWeight: 600, marginTop: 2,
-                color: '#a855f7',
-              }}>
-                ● {role === 'instructor' ? 'مدرّس' : userGender === 'female' ? 'طالبة' : 'طالب'}
+              <div style={{ fontSize: 11, fontWeight: 600, marginTop: 2, color: '#a855f7' }}>
+                ● {roleLabel}
               </div>
             </div>
           </div>
+          {instructorSetupIncomplete && (
+            <div style={{ marginTop: 8, fontSize: 11.5, color: '#fbbf24', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 8, padding: '6px 10px' }}>
+              ⚠️ أكمل التحقق الثنائي والتوثيق لفتح كل الميزات
+            </div>
+          )}
         </div>
 
-        {/* Nav items */}
         <nav style={{ flex: 1, padding: '10px 12px', overflowY: 'auto' }}>
           <div style={{ fontSize: 10.5, fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.1em', padding: '4px 6px 8px' }}>
             القائمة الرئيسية
@@ -115,7 +114,6 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
           ))}
         </nav>
 
-        {/* Footer */}
         <div style={{ padding: '12px 14px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
           <button
             onClick={logout}
