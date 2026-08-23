@@ -5,7 +5,7 @@ import { useAuthApi } from '../../context/AuthApiContext'
 import API from '../../config/api'
 
 export default function InstructorSetup() {
-    const { navigate, userName, refreshUser } = useNav()
+    const { refreshUser } = useNav()
     const { setupMfa, confirmMfa, logout } = useAuthApi()
 
     // MFA state
@@ -25,7 +25,6 @@ export default function InstructorSetup() {
     const [kycDone, setKycDone] = useState<boolean>(false)
 
     const [error, setError] = useState<string>('')
-    const fileInputRef = useRef<HTMLInputElement>(null)
 
     // ---------- MFA ----------
     const handleSetupMfa = async () => {
@@ -111,208 +110,160 @@ export default function InstructorSetup() {
 
     // ---------- التصميم ----------
     return (
-        <div style={{ maxWidth: 720, margin: '0 auto', padding: '2rem 1rem' }}>
-            <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: '#fff', marginBottom: '0.5rem' }}>
-                🚀 إعداد حساب المدرّس
-            </h1>
-            <p style={{ color: 'rgba(255,255,255,0.6)', marginBottom: '2rem' }}>
-                لإكمال تفعيل حسابك كمدرّس، يرجى تفعيل المصادقة الثنائية وإرسال مستندات التحقق.
-            </p>
+        <div className="page-wrapper">
+            <div style={{ maxWidth: 720, margin: '0 auto' }}>
+                <h2 className="section-title">🚀 إعداد حساب المدرّس</h2>
+                <p style={{ color: 'var(--text-muted)', fontSize: 14, margin: '4px 0 24px' }}>
+                    لإكمال تفعيل حسابك كمدرّس، يرجى تفعيل المصادقة الثنائية وإرسال مستندات التحقق.
+                </p>
 
-            {/* مؤشر الخطوات */}
-            <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '1rem' }}>
-                <span style={{ color: step === 1 ? '#a855f7' : 'rgba(255,255,255,0.3)', fontWeight: step === 1 ? 700 : 400 }}>
-                    الخطوة 1: تفعيل المصادقة الثنائية
-                </span>
-                <span style={{ color: 'rgba(255,255,255,0.2)' }}>→</span>
-                <span style={{ color: step === 2 ? '#a855f7' : 'rgba(255,255,255,0.3)', fontWeight: step === 2 ? 700 : 400 }}>
-                    الخطوة 2: التحقق من الهوية (KYC)
-                </span>
-            </div>
-
-            {error && (
-                <div style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid #ef4444', borderRadius: 8, padding: '0.75rem 1rem', marginBottom: '1.5rem', color: '#f87171' }}>
-                    {error}
+                {/* مؤشر الخطوات */}
+                <div style={{ display: 'flex', gap: 16, marginBottom: 24, borderBottom: '1px solid var(--border)', paddingBottom: 16 }}>
+                    <span className="badge" style={{
+                        background: step === 1 ? 'rgba(124,58,237,0.2)' : 'rgba(255,255,255,0.08)',
+                        color: step === 1 ? '#c4b5fd' : 'var(--text-subtle)',
+                    }}>
+                        الخطوة 1: تفعيل المصادقة الثنائية
+                    </span>
+                    <span style={{ color: 'var(--text-subtle)' }}>→</span>
+                    <span className="badge" style={{
+                        background: step === 2 ? 'rgba(124,58,237,0.2)' : 'rgba(255,255,255,0.08)',
+                        color: step === 2 ? '#c4b5fd' : 'var(--text-subtle)',
+                    }}>
+                        الخطوة 2: التحقق من الهوية (KYC)
+                    </span>
                 </div>
-            )}
 
-            {/* الخطوة 1: MFA */}
-            {step === 1 && (
-                <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 16, padding: '1.5rem', border: '1px solid rgba(255,255,255,0.06)' }}>
-                    <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#fff', marginBottom: '0.75rem' }}>
-                        🔐 تفعيل المصادقة الثنائية (MFA)
-                    </h2>
-                    <p style={{ color: 'rgba(255,255,255,0.6)', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
-                        استخدم تطبيق Google Authenticator أو أي تطبيق TOTP لمسح الرمز، ثم أدخل الرمز الظاهر لديك.
-                    </p>
+                {error && (
+                    <div className="badge badge-danger" style={{ display: 'block', padding: '12px 16px', marginBottom: 20, fontSize: 13.5, fontWeight: 400 }}>
+                        {error}
+                    </div>
+                )}
 
-                    {!qrCodeDataUrl ? (
-                        <button
-                            onClick={handleSetupMfa}
-                            disabled={mfaLoading}
-                            style={{
-                                padding: '0.75rem 2rem',
-                                background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
-                                border: 'none',
-                                borderRadius: 10,
-                                color: '#fff',
-                                fontWeight: 600,
-                                fontSize: '1rem',
-                                cursor: mfaLoading ? 'not-allowed' : 'pointer',
-                                opacity: mfaLoading ? 0.6 : 1,
-                                transition: 'all 0.2s',
-                            }}
-                        >
-                            {mfaLoading ? 'جاري التحميل...' : 'إنشاء رمز MFA'}
-                        </button>
-                    ) : (
-                        <div>
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem' }}>
-                                <img src={qrCodeDataUrl} alt="QR Code for MFA" style={{ width: 200, height: 200, borderRadius: 12, background: '#fff', padding: 8 }} />
-                                <div style={{ background: 'rgba(255,255,255,0.05)', padding: '0.75rem 1rem', borderRadius: 8, width: '100%', textAlign: 'center' }}>
-                                    <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem' }}>المفتاح اليدوي: </span>
-                                    <code style={{ color: '#a855f7', fontSize: '0.9rem', wordBreak: 'break-all' }}>{manualEntryKey}</code>
-                                </div>
-                            </div>
+                {/* الخطوة 1: MFA */}
+                {step === 1 && (
+                    <div className="glass" style={{ padding: 24 }}>
+                        <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>🔐 تفعيل المصادقة الثنائية (MFA)</h3>
+                        <p style={{ color: 'var(--text-muted)', marginBottom: 20, fontSize: 13.5 }}>
+                            استخدم تطبيق Google Authenticator أو أي تطبيق TOTP لمسح الرمز، ثم أدخل الرمز الظاهر لديك.
+                        </p>
 
-                            <div style={{ marginTop: '1.5rem', display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                                <input
-                                    type="text"
-                                    placeholder="أدخل رمز التحقق المكون من 6 أرقام"
-                                    value={mfaCode}
-                                    onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                                    style={{
-                                        flex: 1,
-                                        padding: '0.7rem 1rem',
-                                        background: 'rgba(255,255,255,0.06)',
-                                        border: '1px solid rgba(255,255,255,0.12)',
-                                        borderRadius: 10,
-                                        color: '#fff',
-                                        fontSize: '1rem',
-                                        outline: 'none',
-                                        minWidth: 200,
-                                    }}
-                                    disabled={mfaVerified}
-                                />
-                                <button
-                                    onClick={handleVerifyMfa}
-                                    disabled={mfaLoading || mfaVerified || mfaCode.length < 6}
-                                    style={{
-                                        padding: '0.7rem 2rem',
-                                        background: mfaVerified ? 'rgba(34,197,94,0.2)' : 'linear-gradient(135deg, #7c3aed, #a855f7)',
-                                        border: 'none',
-                                        borderRadius: 10,
-                                        color: '#fff',
-                                        fontWeight: 600,
-                                        cursor: mfaLoading || mfaVerified || mfaCode.length < 6 ? 'not-allowed' : 'pointer',
-                                        opacity: mfaLoading || mfaVerified || mfaCode.length < 6 ? 0.5 : 1,
-                                    }}
-                                >
-                                    {mfaLoading ? 'جاري التحقق...' : mfaVerified ? '✅ مفعّل' : 'تحقق'}
-                                </button>
-                            </div>
-
-                            {mfaVerified && backupCodes.length > 0 && (
-                                <div style={{ marginTop: '1.5rem', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 8, padding: '1rem' }}>
-                                    <p style={{ color: '#4ade80', fontSize: '0.9rem', fontWeight: 500, marginBottom: '0.5rem' }}>
-                                        ✅ تم تفعيل المصادقة الثنائية بنجاح
-                                    </p>
-                                    <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem' }}>
-                                        رموز الاسترداد (احفظها في مكان آمن):
-                                    </p>
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
-                                        {backupCodes.map((code, i) => (
-                                            <code key={i} style={{ background: 'rgba(255,255,255,0.05)', padding: '0.3rem 0.7rem', borderRadius: 6, color: '#fbbf24', fontSize: '0.8rem' }}>
-                                                {code}
-                                            </code>
-                                        ))}
+                        {!qrCodeDataUrl ? (
+                            <button className="btn-primary" onClick={handleSetupMfa} disabled={mfaLoading}>
+                                {mfaLoading ? 'جاري التحميل...' : 'إنشاء رمز MFA'}
+                            </button>
+                        ) : (
+                            <div>
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
+                                    <img src={qrCodeDataUrl} alt="QR Code for MFA" style={{ width: 200, height: 200, borderRadius: 12, background: '#fff', padding: 8 }} />
+                                    <div style={{ background: 'rgba(255,255,255,0.05)', padding: '10px 14px', borderRadius: 8, width: '100%', textAlign: 'center' }}>
+                                        <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>المفتاح اليدوي: </span>
+                                        <code style={{ color: 'var(--primary-light)', fontSize: 13.5, wordBreak: 'break-all' }}>{manualEntryKey}</code>
                                     </div>
                                 </div>
-                            )}
-                        </div>
-                    )}
-                </div>
-            )}
 
-            {/* الخطوة 2: KYC */}
-            {step === 2 && (
-                <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 16, padding: '1.5rem', border: '1px solid rgba(255,255,255,0.06)' }}>
-                    <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#fff', marginBottom: '0.75rem' }}>
-                        🪪 التحقق من الهوية (KYC)
-                    </h2>
-                    <p style={{ color: 'rgba(255,255,255,0.6)', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
-                        أرسل صورة وثيقتك الرسمية وصورة سيلفي لإكمال التحقق. سيراجعها فريق الإدارة يدويًا.
-                    </p>
+                                <div style={{ marginTop: 20, display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                                    <div style={{ flex: 1, minWidth: 200 }}>
+                                        <label className="form-label">رمز التحقق</label>
+                                        <input
+                                            className="form-input"
+                                            type="text"
+                                            placeholder="أدخل رمز التحقق المكون من 6 أرقام"
+                                            value={mfaCode}
+                                            onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                            disabled={mfaVerified}
+                                        />
+                                    </div>
+                                    <button
+                                        className="btn-primary"
+                                        onClick={handleVerifyMfa}
+                                        disabled={mfaLoading || mfaVerified || mfaCode.length < 6}
+                                        style={{ opacity: mfaLoading || mfaVerified || mfaCode.length < 6 ? 0.5 : 1 }}
+                                    >
+                                        {mfaLoading ? 'جاري التحقق...' : mfaVerified ? '✅ مفعّل' : 'تحقق'}
+                                    </button>
+                                </div>
 
-                    {!kycDone ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                            <div>
-                                <label style={{ display: 'block', color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem', marginBottom: '0.3rem' }}>نوع الوثيقة</label>
-                                <select
-                                    value={idDocumentType}
-                                    onChange={(e) => setIdDocumentType(e.target.value as 'national_id' | 'passport')}
-                                    style={{
-                                        width: '100%', padding: '0.7rem 1rem',
-                                        background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
-                                        borderRadius: 10, color: '#fff', fontSize: '1rem', outline: 'none',
-                                    }}
+                                {mfaVerified && backupCodes.length > 0 && (
+                                    <div style={{ marginTop: 20, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 10, padding: 16 }}>
+                                        <p style={{ color: '#34d399', fontSize: 13.5, fontWeight: 600, marginBottom: 8 }}>
+                                            ✅ تم تفعيل المصادقة الثنائية بنجاح
+                                        </p>
+                                        <p style={{ color: 'var(--text-muted)', fontSize: 12.5 }}>
+                                            رموز الاسترداد (احفظها في مكان آمن):
+                                        </p>
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+                                            {backupCodes.map((code, i) => (
+                                                <code key={i} style={{ background: 'rgba(255,255,255,0.05)', padding: '4px 10px', borderRadius: 6, color: '#fbbf24', fontSize: 12.5 }}>
+                                                    {code}
+                                                </code>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* الخطوة 2: KYC */}
+                {step === 2 && (
+                    <div className="glass" style={{ padding: 24 }}>
+                        <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>🪪 التحقق من الهوية (KYC)</h3>
+                        <p style={{ color: 'var(--text-muted)', marginBottom: 20, fontSize: 13.5 }}>
+                            أرسل صورة وثيقتك الرسمية وصورة سيلفي لإكمال التحقق. سيراجعها فريق الإدارة يدويًا.
+                        </p>
+
+                        {!kycDone ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                                <div>
+                                    <label className="form-label">نوع الوثيقة</label>
+                                    <select
+                                        className="form-input"
+                                        value={idDocumentType}
+                                        onChange={(e) => setIdDocumentType(e.target.value as 'national_id' | 'passport')}
+                                    >
+                                        <option value="national_id">الهوية الوطنية</option>
+                                        <option value="passport">جواز السفر</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="form-label">صورة الوثيقة</label>
+                                    <FileDropZone file={idFile} onSelect={setIdFile} label="انقر لتحميل صورة الوثيقة" />
+                                </div>
+
+                                <div>
+                                    <label className="form-label">صورة سيلفي (وجهك واضح)</label>
+                                    <FileDropZone file={selfieFile} onSelect={setSelfieFile} label="انقر لتحميل صورة سيلفي" />
+                                </div>
+
+                                <button
+                                    className="btn-primary"
+                                    onClick={handleKycSubmit}
+                                    disabled={kycLoading}
+                                    style={{ justifyContent: 'center', marginTop: 4 }}
                                 >
-                                    <option value="national_id">الهوية الوطنية</option>
-                                    <option value="passport">جواز السفر</option>
-                                </select>
+                                    {kycLoading ? 'جاري الرفع...' : 'إرسال الطلب'}
+                                </button>
                             </div>
-
-                            <div>
-                                <label style={{ display: 'block', color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem', marginBottom: '0.3rem' }}>صورة الوثيقة</label>
-                                <FileDropZone file={idFile} onSelect={setIdFile} label="انقر لتحميل صورة الوثيقة" />
+                        ) : (
+                            <div style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 10, padding: 16 }}>
+                                <p style={{ color: '#34d399', fontWeight: 600, marginBottom: 6, fontSize: 13.5 }}>✅ تم إرسال طلبك للمراجعة</p>
+                                <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>
+                                    سيراجع فريق الإدارة طلبك خلال 1-3 أيام عمل. رح تقدر تدخل للوحة التحكم بمجرد الموافقة.
+                                </p>
                             </div>
+                        )}
+                    </div>
+                )}
 
-                            <div>
-                                <label style={{ display: 'block', color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem', marginBottom: '0.3rem' }}>صورة سيلفي (وجهك واضح)</label>
-                                <FileDropZone file={selfieFile} onSelect={setSelfieFile} label="انقر لتحميل صورة سيلفي" />
-                            </div>
-
-                            <button
-                                onClick={handleKycSubmit}
-                                disabled={kycLoading}
-                                style={{
-                                    padding: '0.75rem',
-                                    background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
-                                    border: 'none', borderRadius: 10, color: '#fff', fontWeight: 600, fontSize: '1rem',
-                                    cursor: kycLoading ? 'not-allowed' : 'pointer',
-                                    opacity: kycLoading ? 0.6 : 1, transition: 'all 0.2s', marginTop: '0.5rem',
-                                }}
-                            >
-                                {kycLoading ? 'جاري الرفع...' : 'إرسال الطلب'}
-                            </button>
-                        </div>
-                    ) : (
-                        <div style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 8, padding: '1rem' }}>
-                            <p style={{ color: '#4ade80', fontWeight: 600, marginBottom: 6 }}>✅ تم إرسال طلبك للمراجعة</p>
-                            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem' }}>
-                                سيراجع فريق الإدارة طلبك خلال 1-3 أيام عمل. رح تقدر تدخل للوحة التحكم بمجرد الموافقة.
-                            </p>
-                        </div>
-                    )}
+                {/* زر الخروج */}
+                <div style={{ marginTop: 24, textAlign: 'center' }}>
+                    <button className="btn-ghost" onClick={logout}>
+                        تسجيل الخروج
+                    </button>
                 </div>
-            )}
-
-            {/* زر الخروج */}
-            <div style={{ marginTop: '2rem', textAlign: 'center' }}>
-                <button
-                    onClick={logout}
-                    style={{
-                        background: 'transparent',
-                        border: '1px solid rgba(255,255,255,0.15)',
-                        color: 'rgba(255,255,255,0.5)',
-                        padding: '0.5rem 1.5rem',
-                        borderRadius: 8,
-                        cursor: 'pointer',
-                        fontSize: '0.9rem',
-                    }}
-                >
-                    تسجيل الخروج
-                </button>
             </div>
         </div>
     )
@@ -323,7 +274,7 @@ function FileDropZone({ file, onSelect, label }: { file: File | null; onSelect: 
     return (
         <div
             style={{
-                border: '2px dashed rgba(255,255,255,0.2)', borderRadius: 10, padding: '1.5rem',
+                border: '2px dashed var(--border)', borderRadius: 10, padding: 24,
                 textAlign: 'center', cursor: 'pointer', background: 'rgba(255,255,255,0.02)',
             }}
             onClick={() => ref.current?.click()}
@@ -335,7 +286,7 @@ function FileDropZone({ file, onSelect, label }: { file: File | null; onSelect: 
                 style={{ display: 'none' }}
                 onChange={(e) => { if (e.target.files?.[0]) onSelect(e.target.files[0]) }}
             />
-            {file ? <span style={{ color: '#4ade80' }}>✅ {file.name}</span> : <span style={{ color: 'rgba(255,255,255,0.5)' }}>{label}</span>}
+            {file ? <span style={{ color: '#4ade80' }}>✅ {file.name}</span> : <span style={{ color: 'var(--text-subtle)' }}>{label}</span>}
         </div>
     )
 }
