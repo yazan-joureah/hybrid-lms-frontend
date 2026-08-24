@@ -15,9 +15,10 @@ interface Props {
     selectedId: string | null
     onSelect: (courseId: string) => void
     onCreateClick: () => void
+    onPreview: (courseId: string) => void
 }
 
-export function CourseListPanel({ courses, selectedId, onSelect, onCreateClick }: Props) {
+export function CourseListPanel({ courses, selectedId, onSelect, onCreateClick, onPreview }: Props) {
     if (courses.length === 0) {
         return (
             <div style={{ textAlign: 'center', padding: '60px 20px', color: 'rgba(255,255,255,0.35)' }}>
@@ -55,11 +56,20 @@ export function CourseListPanel({ courses, selectedId, onSelect, onCreateClick }
                                     {statusMeta.label}
                                 </span>
                                 <span style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.45)' }}>👥 {c.enrolledCount ?? 0} طالب</span>
-                                {c.rejection_reason && <span style={{ fontSize: 12, color: '#f87171' }}>❌ {c.rejection_reason}</span>}
+                                {c.rejection_reason && c.status !== 'published' && (
+                                    <span style={{ fontSize: 12, color: '#f87171' }}>❌ {c.rejection_reason}</span>
+                                )}
                             </div>
                         </div>
-                        <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 16, flexShrink: 0 }}>{selectedId === c._id ? '▲' : '←'}</span>
-                    </div>
+                        <button
+                            className="btn-outline" style={{ padding: '6px 14px', fontSize: 12, flexShrink: 0 }}
+                            onClick={e => { e.stopPropagation(); onPreview(c._id) }}
+                        >
+                            👁 معاينة
+                        </button>
+                        <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 16, flexShrink: 0 }}>
+                            {selectedId === c._id ? '▲' : '←'}
+                        </span>                    </div>
                 )
             })}
         </div>

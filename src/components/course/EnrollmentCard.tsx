@@ -4,10 +4,11 @@ import { getCourseCoverUrl, PLACEHOLDER_IMAGE, handleImageFallback } from '../..
 interface Props {
     enrollment: Enrollment
     progressPercentage: number
+    unavailable: boolean
     onClick: () => void
 }
 
-export function EnrollmentCard({ enrollment, progressPercentage, onClick }: Props) {
+export function EnrollmentCard({ enrollment, progressPercentage, unavailable, onClick }: Props) {
     const course = enrollment.course_id
     const isPendingPayment = enrollment.status === 'pending_payment'
     const isCancelled = enrollment.status === 'cancelled'
@@ -16,7 +17,7 @@ export function EnrollmentCard({ enrollment, progressPercentage, onClick }: Prop
     return (
         <div
             className="course-card"
-            style={{ opacity: isCancelled ? 0.55 : 1, cursor: isCancelled ? 'default' : 'pointer' }}
+            style={{ opacity: isCancelled || unavailable ? 0.6 : 1, cursor: isCancelled ? 'default' : 'pointer' }}
             onClick={onClick}
         >
             <div style={{ position: 'relative' }}>
@@ -26,6 +27,11 @@ export function EnrollmentCard({ enrollment, progressPercentage, onClick }: Prop
                     style={{ width: '100%', height: 168, objectFit: 'cover' }}
                     onError={handleImageFallback}
                 />
+                {unavailable && !isCancelled && (
+                    <span style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(245,158,11,0.9)', color: '#fff', fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 9999 }}>
+                        🛠️ قيد التحديث
+                    </span>
+                )}
                 {isCompleted && (
                     <span style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(16,185,129,0.9)', color: '#fff', fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 9999 }}>
                         ✅ مكتمل
@@ -59,7 +65,7 @@ export function EnrollmentCard({ enrollment, progressPercentage, onClick }: Prop
                 )}
 
                 <button className="btn-primary" style={{ width: '100%', justifyContent: 'center', padding: '9px', fontSize: 13.5 }} disabled={isCancelled} onClick={e => { e.stopPropagation(); onClick() }}>
-                    {isCancelled ? '🚫 غير متاح' : isPendingPayment ? '💳 إتمام الدفع' : isCompleted ? '🏆 مكتمل — مراجعة' : '▶ متابعة التعلم'}
+                    {isCancelled ? '🚫 غير متاح' : unavailable ? '🛠️ قيد التحديث' : isPendingPayment ? '💳 إتمام الدفع' : isCompleted ? '🏆 مكتمل — مراجعة' : '▶ متابعة التعلم'}
                 </button>
             </div>
         </div>

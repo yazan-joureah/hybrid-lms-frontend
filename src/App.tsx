@@ -27,6 +27,7 @@ import GradingManager from './pages/instructor/GradingManager'
 import LiveController from './pages/instructor/LiveController'
 import QuizCreator from './pages/instructor/QuizCreator'
 import InstructorAnalytics from './pages/instructor/InstructorAnalytics'
+import GuestLayout from './components/GuestLayout'
 
 import AdminDashboard from './pages/admin/AdminDashboard'
 // ملاحظة: KycReview.tsx لم يعد مستخدمًا كصفحة مستقلة — تم دمج منطقها
@@ -96,6 +97,7 @@ function AppShell() {
       return
     }
     setPageState(target)
+    sessionStorage.setItem('last_page', target)
   }, [instructorSetupIncomplete])
 
   const applyUserSnapshot = (user: BackendUser) => {
@@ -160,6 +162,9 @@ function AppShell() {
         if (googleSuccess) {
           window.history.replaceState({}, '', window.location.pathname)
           setPageState(computeFallbackPage(res.user))
+        } else {
+          const lastPage = sessionStorage.getItem('last_page') as Page | null
+          setPageState(lastPage || computeFallbackPage(res.user))
         }
       } else if (googleSuccess) {
         window.history.replaceState({}, '', window.location.pathname)
@@ -206,6 +211,15 @@ function AppShell() {
   }
 
   if (!isAuthenticated) {
+    if (page === 'course-catalog') {
+      return (
+        <NavContext.Provider value={ctx}>
+          <GuestLayout>
+            <CourseCatalog />
+          </GuestLayout>
+        </NavContext.Provider>
+      )
+    }
     return (
       <NavContext.Provider value={ctx}>
         {page === 'landing' && <Landing />}

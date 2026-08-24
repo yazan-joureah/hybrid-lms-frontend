@@ -18,7 +18,6 @@ export interface CourseUnit {
     _id: string
     title: string
     desc?: string
-    content?: unknown[]
 }
 
 export interface CourseListParams {
@@ -56,6 +55,22 @@ export interface InstructorCourse extends CourseSummary {
     completion_threshold?: number
 }
 
+export interface PendingCourseSummary extends CourseSummary {
+    status: string
+    updatedAt: string
+    instructor_id: { full_name?: string } | string
+}
+
+export type CourseReviewDecision = 'publish' | 'needs_revision' | 'reject'
+export type CourseModerationStatus = 'suspended' | 'archived'
+
+export interface EnrolledStudent {
+    _id: string
+    student_id: { _id: string; full_name: string; email: string } | null
+    enrolled_at: string
+    status: EnrollmentStatus
+}
+
 export interface CourseFormPayload {
     title: string
     description: string
@@ -74,10 +89,15 @@ export interface ContentItem {
     content_type: 'video' | 'document' | 'link' | 'text'
     content_data?: { url?: string; text?: string }
     mime_type?: string
+    completed?: boolean
 }
 
 export interface UnitDetail extends CourseUnit {
     content: ContentItem[]
+}
+
+export interface PlayerUnit extends CourseUnit {
+    content?: ContentItem[]
 }
 
 export interface ContentFormInput {
@@ -135,7 +155,6 @@ export const courseService = {
             const res = await API.get(`/courses/${courseId}/progress-summary`)
             return res.data?.data || null
         } catch {
-            // بعض الحالات (مثلاً كورس بدون تقدّم مسجَّل بعد) قد ترجع خطأ — لا نكسر الصفحة لأجلها
             return null
         }
     },
@@ -173,7 +192,7 @@ export const courseService = {
 
     uploadCoverImage: async (courseId: string, file: File): Promise<void> => {
         const formData = new FormData()
-        formData.append('image', file) // مطابق للباك: uploadImage.single('image')
+        formData.append('image', file)
         await API.patch(`/courses/${courseId}/cover-image`, formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
         })
@@ -260,5 +279,37 @@ export const courseService = {
 
     reorderContent: async (courseId: string, unitId: string, orderedContentIds: string[]): Promise<void> => {
         await API.patch(`/courses/${courseId}/units/${unitId}/content/reorder`, { ordered_content_ids: orderedContentIds })
+    },
+
+    // ---------- Student: content player ----------
+    getContentFileBlob: async (courseId: string, contentId: string): Promise<Blob> => {
+        const res = await API.get(`/courses/${courseId}/content/${contentId}/file`, { responseType: 'blob' })
+        return res.data
+    },
+
+    markContentComplete: async (courseId: string, contentId: string): Promise<void> => {
+        await API.post(`/courses/${courseId}/progress`, { content_id: contentId })
+    },
+
+    // ---------- Admin: course moderation ----------
+    getPendingCourses: async (): Promise<PendingCourseSummary[]> => {
+        const res = await API.get('/admin/courses/pending')
+        return res.data?.data?.courses || []
+    },
+
+    submitCourseReview: async (courseId: string, decision: CourseReviewDecision, reason?: string): Promise<void> => {
+        const payload: Record<string, unknown> = { decision }
+        if (decision !== 'publish' && reason) payload.reason = reason
+        await API.post(`/admin/courses/${courseId}/review`, payload)
+    },
+
+    updateCourseStatus: async (courseId: string, status: CourseModerationStatus): Promise<void> => {
+        await API.patch(`/admin/courses/${courseId}/status`, { status })
+    },
+
+    // ---------- Instructor: enrolled students ----------
+    getEnrolledStudents: async (courseId: string): Promise<EnrolledStudent[]> => {
+        const res = await API.get(`/courses/${courseId}/students`)
+        return res.data?.data?.students || []
     },
 }

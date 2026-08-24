@@ -19,10 +19,15 @@ const TAB_LABELS: Record<TabKey, string> = {
 export default function MyCourses() {
   const { navigate } = useNav()
   const { info } = useToast()
-  const { enrollments, progressMap, loading, byStatus } = useMyCourses()
+  const { enrollments, progressMap, loading, byStatus, refetch } = useMyCourses()
 
   const [activeTab, setActiveTab] = useState<TabKey>('active')
   const [selected, setSelected] = useState<Enrollment | null>(null)
+
+  const handleBackFromPlayer = () => {
+    setSelected(null)
+    refetch()
+  }
 
   const counts: Record<TabKey, number> = {
     active: byStatus('active').length,
@@ -33,8 +38,13 @@ export default function MyCourses() {
   const visible = byStatus(activeTab)
 
   const handleCardClick = (enrollment: Enrollment) => {
+    const course = enrollment.course_id
     if (enrollment.status === 'pending_payment') { info('إتمام الدفع غير مفعّل بعد بهذه المرحلة.'); return }
     if (enrollment.status === 'cancelled') { info('تم إلغاء هذا التسجيل واسترداد المبلغ. لا يمكن الوصول لمحتوى الكورس.'); return }
+    if (course?.status && course.status !== 'published') {
+      info('هذا الكورس قيد التحديث حالياً من قبل المحاضر وينتظر مراجعة الإدارة. سيعود الوصول تلقائياً بعد الاعتماد.')
+      return
+    }
     setSelected(enrollment)
   }
 
@@ -50,11 +60,7 @@ export default function MyCourses() {
   if (selected) {
     return (
       <div className="page-wrapper">
-        <CourseOverviewPanel
-          enrollment={selected}
-          progressPercentage={progressMap[selected.course_id?._id || ''] ?? 0}
-          onBack={() => setSelected(null)}
-        />
+        <CourseOverviewPanel enrollment={selected} onBack={handleBackFromPlayer} />
       </div>
     )
   }
@@ -97,6 +103,7 @@ export default function MyCourses() {
               key={e._id}
               enrollment={e}
               progressPercentage={progressMap[e.course_id?._id || ''] ?? 0}
+              unavailable={Boolean(e.course_id?.status && e.course_id.status !== 'published')}
               onClick={() => handleCardClick(e)}
             />
           ))}

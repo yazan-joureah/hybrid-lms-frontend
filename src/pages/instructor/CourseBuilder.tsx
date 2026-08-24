@@ -4,12 +4,13 @@ import { CourseListPanel } from './course-builder/CourseListPanel'
 import { CourseDetailPanel } from './course-builder/CourseDetailPanel'
 import { CreateCourseModal } from './course-builder/CreateCourseModal'
 import { SkeletonLoader } from '../../components/common/Loading'
+import { CourseContentPreviewModal } from '../../components/course/CourseContentPreviewModal'
 
 export default function CourseBuilder() {
   const { courses, loading, refetch } = useInstructorCourses()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [showCreate, setShowCreate] = useState(false)
-
+  const [previewId, setPreviewId] = useState<string | null>(null)
   const handleSelect = (courseId: string) => {
     setSelectedId(prev => (prev === courseId ? null : courseId))
   }
@@ -32,8 +33,11 @@ export default function CourseBuilder() {
       {loading ? (
         <SkeletonLoader type="row" count={3} />
       ) : (
-        <CourseListPanel courses={courses} selectedId={selectedId} onSelect={handleSelect} onCreateClick={() => setShowCreate(true)} />
-      )}
+        <CourseListPanel
+          courses={courses} selectedId={selectedId}
+          onSelect={handleSelect} onCreateClick={() => setShowCreate(true)}
+          onPreview={setPreviewId}
+        />)}
 
       {selectedId && (
         <CourseDetailPanel courseId={selectedId} onChanged={refetch} onDeleted={handleDeleted} />
@@ -41,6 +45,9 @@ export default function CourseBuilder() {
 
       {showCreate && (
         <CreateCourseModal onClose={() => setShowCreate(false)} onCreated={refetch} />
+      )}
+      {previewId && (
+        <CourseContentPreviewModal courseId={previewId} viewerRole="instructor" onClose={() => setPreviewId(null)} />
       )}
     </div>
   )

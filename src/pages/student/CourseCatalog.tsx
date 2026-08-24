@@ -7,9 +7,16 @@ import { CoursePreviewModal } from '../../components/course/CoursePreviewModal'
 import { SkeletonLoader } from '../../components/common/Loading'
 
 export default function CourseCatalog() {
-  const { role } = useNav()
+  const { role, isAuthenticated, navigate } = useNav()
   const catalog = useCourseCatalog()
   const [previewId, setPreviewId] = useState<string | null>(null)
+  const viewerState: 'guest' | 'student' | 'other' = !isAuthenticated
+    ? 'guest'
+    : role === 'student' ? 'student' : 'other'
+
+  const handleRequireAuth = () => {
+    navigate('login')
+  }
 
   return (
     <div className="page-wrapper">
@@ -65,9 +72,10 @@ export default function CourseCatalog() {
 
       <CoursePreviewModal
         courseId={previewId}
-        canEnroll={role === 'student'}
+        viewerState={viewerState}
         onClose={() => setPreviewId(null)}
         onEnrolled={catalog.refetch}
+        onRequireAuth={handleRequireAuth}
       />
     </div>
   )

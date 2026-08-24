@@ -1,17 +1,22 @@
+// src/pages/instructor/course-builder/CourseInfoTab.tsx
 import { useState, useEffect } from 'react'
-import { useCourseDetail } from '../../../hooks/course/useCourseDetail'
+import type { useCourseDetail } from '../../../hooks/course/useCourseDetail'
 import { CourseInfoForm } from '../../../components/course/CourseInfoForm'
 import { getCourseCoverUrl, PLACEHOLDER_IMAGE, handleImageFallback } from '../../../utils/imageUtils'
 import type { CourseFormPayload } from '../../../services/courseService'
+import type { Quiz } from '../../../services/quizService'
 
-interface Props {
-    courseId: string
-    onChanged: () => void
+type CourseInfoTabProps = ReturnType<typeof useCourseDetail> & {
+    finalExam?: Quiz
+    quizzesLoading: boolean
     onDeleted: () => void
+    onGoToQuizzesTab: () => void
 }
 
-export function CourseInfoTab({ courseId, onChanged, onDeleted }: Props) {
-    const { detail, loading, saving, coverUploading, updateCourse, deleteCourse, uploadCover, submitForReview, cancelReview } = useCourseDetail(courseId, onChanged)
+export function CourseInfoTab({
+    detail, loading, saving, coverUploading, updateCourse, deleteCourse, uploadCover, submitForReview, cancelReview,
+    finalExam, quizzesLoading, onDeleted, onGoToQuizzesTab,
+}: CourseInfoTabProps) {
     const [editMode, setEditMode] = useState(false)
     const [editForm, setEditForm] = useState<CourseFormPayload | null>(null)
 
@@ -40,12 +45,22 @@ export function CourseInfoTab({ courseId, onChanged, onDeleted }: Props) {
         if (ok) onDeleted()
     }
 
+    const canSubmitReview = Boolean(finalExam && finalExam.status === 'published')
+    const showExamGateBanner = !quizzesLoading && (detail.status === 'draft' || detail.status === 'rejected') && !canSubmitReview
+
     return (
         <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20, flexWrap: 'wrap', gap: 10 }}>
                 <div style={{ display: 'flex', gap: 10 }}>
                     {(detail.status === 'draft' || detail.status === 'rejected') && (
-                        <button className="btn-primary" style={{ padding: '8px 18px', fontSize: 13.5 }} onClick={submitForReview}>إرسال للمراجعة</button>
+                        <button
+                            className="btn-primary" style={{ padding: '8px 18px', fontSize: 13.5 }}
+                            disabled={!canSubmitReview || quizzesLoading}
+                            title={!canSubmitReview ? 'يجب إنشاء امتحان نهائي ونشره أولاً' : undefined}
+                            onClick={submitForReview}
+                        >
+                            إرسال للمراجعة
+                        </button>
                     )}
                     {detail.status === 'pending_review' && (
                         <button className="btn-outline" style={{ padding: '8px 18px', fontSize: 13.5 }} onClick={cancelReview}>إلغاء طلب المراجعة</button>
@@ -63,7 +78,18 @@ export function CourseInfoTab({ courseId, onChanged, onDeleted }: Props) {
                 )}
             </div>
 
-            {detail.rejection_reason && (
+            {showExamGateBanner && (
+                <div style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 12, padding: '13px 16px', marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+                    <span style={{ fontSize: 13, color: '#fbbf24' }}>
+                        ⚠️ {finalExam ? 'يوجد لديك امتحان نهائي كمسودة — يجب نشره' : 'يجب إنشاء امتحان نهائي واحد ونشره'} قبل إرسال الكورس للمراجعة.
+                    </span>
+                    <button className="btn-outline" style={{ padding: '6px 16px', fontSize: 12.5, flexShrink: 0 }} onClick={onGoToQuizzesTab}>
+                        الانتقال إلى تبويب الاختبارات →
+                    </button>
+                </div>
+            )}
+
+            {detail.rejection_reason && detail.status !== 'published' && (
                 <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 12, padding: '12px 16px', marginBottom: 20, fontSize: 13.5 }}>
                     <strong style={{ color: '#f87171' }}>ملاحظات الإدارة:</strong> {detail.rejection_reason}
                 </div>
