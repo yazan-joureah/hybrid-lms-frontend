@@ -43,12 +43,39 @@ type CourseContent = {
     content_data?: { url?: string; text?: string }
 }
 
+// ==================== أنواع إدارة الحسابات ====================
+type AccountRole = 'Student' | 'Instructor' | 'Admin' | 'Superadmin'
+type AccountStatus = 'active' | 'suspended' | 'banned'
+
+type AccountUser = {
+    _id: string
+    full_name: string
+    email: string
+    role: AccountRole
+    status: AccountStatus
+    kyc_status?: string
+    created_at?: string
+}
+
+const ROLE_LABELS: Record<AccountRole, string> = {
+    Student: 'طالب',
+    Instructor: 'مدرّس',
+    Admin: 'أدمن',
+    Superadmin: 'أدمن رئيسي',
+}
+
+const STATUS_LABELS: Record<AccountStatus, string> = {
+    active: 'نشط',
+    suspended: 'معلّق',
+    banned: 'محظور',
+}
+
 function extractError(err: any): string {
     return err?.response?.data?.error?.message || err?.message || 'حدث خطأ غير متوقع.'
 }
 
 export default function AdminDashboard() {
-    const [activeTab, setActiveTab] = useState<'kyc' | 'courses'>('kyc')
+    const [activeTab, setActiveTab] = useState<'kyc' | 'courses' | 'accounts'>('kyc')
 
     return (
         <div className="page-wrapper">
@@ -63,9 +90,12 @@ export default function AdminDashboard() {
                 <div className={`tab-item${activeTab === 'courses' ? ' active' : ''}`} onClick={() => setActiveTab('courses')}>
                     مراجعة الكورسات
                 </div>
+                <div className={`tab-item${activeTab === 'accounts' ? ' active' : ''}`} onClick={() => setActiveTab('accounts')}>
+                    إدارة الحسابات
+                </div>
             </div>
 
-            {activeTab === 'kyc' ? <KycTab /> : <CourseModerationTab />}
+            {activeTab === 'kyc' ? <KycTab /> : activeTab === 'courses' ? <CourseModerationTab /> : <AccountManagementTab />}
         </div>
     )
 }
@@ -564,6 +594,252 @@ function CourseModerationTab() {
                     أرشفة فورية
                 </button>
             </div>
+        </div>
+    )
+}
+
+// ==================================================================
+// تبويب إدارة الحسابات
+// ==================================================================
+// ⚠️ افتراض غير مؤكد: مسارات /admin/users/* قياسًا على نفس نمط
+// adminRoutes.js الموجود (/admin/kyc, /admin/courses) — ما إلها تأكيد
+// من الباك الفعلي، تحقق منها قبل الدمج:
+//   GET    /admin/users?search=&role=&status=&page=&limit=  -> { users, total, page, pages }
+//   PATCH  /admin/users/:id/role    { role }
+//   PATCH  /admin/users/:id/status  { status }   // active | suspended | banned
+//   DELETE /admin/users/:id
+function AccountManagementTab() {
+    const PAGE_SIZE = 15
+
+    const [users, setUsers] = useState<AccountUser[]>([])
+    const [total, setTotal] = useState(0)
+    const [page, setPage] = useState(1)
+    const [listLoading, setListLoading] = useState(true)
+    const [listError, setListError] = useState('')
+
+    const [searchInput, setSearchInput] = useState('')
+    const [search, setSearch] = useState('')
+    const [roleFilter, setRoleFilter] = useState<AccountRole | 'all'>('all')
+    const [statusFilter, setStatusFilter] = useState<AccountStatus | 'all'>('all')
+
+    const [rowActionId, setRowActionId] = useState<string | null>(null)
+    const [rowError, setRowError] = useState<{ id: string; message: string } | null>(null)
+
+    const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+
+    const fetchUsers = async () => {
+        setListLoading(true)
+        setListError('')
+        try {
+            const res = await API.get('/admin/users', {
+                params: {
+                    search: search.trim() || undefined,
+                    role: roleFilter !== 'all' ? roleFilter : undefined,
+                    status: statusFilter !== 'all' ? statusFilter : undefined,
+                    page,
+                    limit: PAGE_SIZE,
+                },
+            })
+            const data = res.data?.data
+            setUsers(data?.users || [])
+            setTotal(data?.total ?? (data?.users?.length || 0))
+        } catch (err) {
+            setListError(extractError(err))
+        } finally {
+            setListLoading(false)
+        }
+    }
+
+    useEffect(() => {
+        fetchUsers()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [search, roleFilter, statusFilter, page])
+
+    const handleSearchSubmit = (e: React.FormEvent) => {
+        e.preventDefault()
+        setPage(1)
+        setSearch(searchInput.trim())
+    }
+
+    const handleChangeRole = async (user: AccountUser, newRole: AccountRole) => {
+        if (newRole === user.role) return
+        if (!window.confirm(`تغيير دور "${user.full_name}" إلى "${ROLE_LABELS[newRole]}"؟`)) return
+        setRowActionId(user._id)
+        setRowError(null)
+        try {
+            await API.patch(`/admin/users/${user._id}/role`, { role: newRole })
+            setUsers((prev) => prev.map((u) => (u._id === user._id ? { ...u, role: newRole } : u)))
+        } catch (err) {
+            setRowError({ id: user._id, message: extractError(err) })
+        } finally {
+            setRowActionId(null)
+        }
+    }
+
+    const handleChangeStatus = async (user: AccountUser, newStatus: AccountStatus) => {
+        if (newStatus === user.status) return
+        const confirmMsg =
+            newStatus === 'banned'
+                ? `هل أنت متأكد من حظر "${user.full_name}"؟ هاد إجراء خطير.`
+                : `تغيير حالة "${user.full_name}" إلى "${STATUS_LABELS[newStatus]}"؟`
+        if (!window.confirm(confirmMsg)) return
+        setRowActionId(user._id)
+        setRowError(null)
+        try {
+            await API.patch(`/admin/users/${user._id}/status`, { status: newStatus })
+            setUsers((prev) => prev.map((u) => (u._id === user._id ? { ...u, status: newStatus } : u)))
+        } catch (err) {
+            setRowError({ id: user._id, message: extractError(err) })
+        } finally {
+            setRowActionId(null)
+        }
+    }
+
+    const handleDelete = async (user: AccountUser) => {
+        if (!window.confirm(`حذف حساب "${user.full_name}" (${user.email}) نهائيًا؟ هاد الإجراء لا يمكن التراجع عنه.`)) return
+        setRowActionId(user._id)
+        setRowError(null)
+        try {
+            await API.delete(`/admin/users/${user._id}`)
+            setUsers((prev) => prev.filter((u) => u._id !== user._id))
+            setTotal((t) => Math.max(0, t - 1))
+        } catch (err) {
+            setRowError({ id: user._id, message: extractError(err) })
+        } finally {
+            setRowActionId(null)
+        }
+    }
+
+    const statusBadgeClass = (status: AccountStatus) => {
+        if (status === 'active') return 'badge badge-success'
+        if (status === 'suspended') return 'badge badge-warning'
+        return 'badge badge-danger'
+    }
+
+    return (
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 18, padding: 24 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18, flexWrap: 'wrap', gap: 12 }}>
+                <h3>حسابات المستخدمين {total ? `(${total})` : ''}</h3>
+
+                <form onSubmit={handleSearchSubmit} style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <input
+                        className="form-input"
+                        placeholder="بحث بالاسم أو الإيميل..."
+                        value={searchInput}
+                        onChange={(e) => setSearchInput(e.target.value)}
+                        style={{ minWidth: 220 }}
+                    />
+                    <select
+                        className="form-input"
+                        value={roleFilter}
+                        onChange={(e) => { setPage(1); setRoleFilter(e.target.value as AccountRole | 'all') }}
+                    >
+                        <option value="all">كل الأدوار</option>
+                        <option value="Student">طالب</option>
+                        <option value="Instructor">مدرّس</option>
+                        <option value="Admin">أدمن</option>
+                        <option value="Superadmin">أدمن رئيسي</option>
+                    </select>
+                    <select
+                        className="form-input"
+                        value={statusFilter}
+                        onChange={(e) => { setPage(1); setStatusFilter(e.target.value as AccountStatus | 'all') }}
+                    >
+                        <option value="all">كل الحالات</option>
+                        <option value="active">نشط</option>
+                        <option value="suspended">معلّق</option>
+                        <option value="banned">محظور</option>
+                    </select>
+                    <button type="submit" className="btn-secondary">بحث</button>
+                </form>
+            </div>
+
+            {listLoading ? (
+                <div style={{ color: 'rgba(255,255,255,0.5)' }}>...جارٍ التحميل</div>
+            ) : listError ? (
+                <div style={{ color: '#f87171' }}>⚠️ {listError}</div>
+            ) : users.length === 0 ? (
+                <p style={{ color: 'rgba(255,255,255,0.5)' }}>لا يوجد مستخدمون مطابقون.</p>
+            ) : (
+                <>
+                    <table className="data-table" style={{ width: '100%' }}>
+                        <thead>
+                            <tr>
+                                <th>المستخدم</th>
+                                <th>الدور</th>
+                                <th>الحالة</th>
+                                <th>KYC</th>
+                                <th>تاريخ الإنشاء</th>
+                                <th>إجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {users.map((u) => {
+                                const isBusy = rowActionId === u._id
+                                return (
+                                    <tr key={u._id}>
+                                        <td>
+                                            <div style={{ fontWeight: 600 }}>{u.full_name}</div>
+                                            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{u.email}</div>
+                                        </td>
+                                        <td>
+                                            <select
+                                                className="form-input"
+                                                style={{ fontSize: 12.5, padding: '6px 8px' }}
+                                                value={u.role}
+                                                disabled={isBusy}
+                                                onChange={(e) => handleChangeRole(u, e.target.value as AccountRole)}
+                                            >
+                                                {(['Student', 'Instructor', 'Admin', 'Superadmin'] as AccountRole[]).map((r) => (
+                                                    <option key={r} value={r}>{ROLE_LABELS[r]}</option>
+                                                ))}
+                                            </select>
+                                        </td>
+                                        <td><span className={statusBadgeClass(u.status)}>{STATUS_LABELS[u.status]}</span></td>
+                                        <td style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.6)' }}>{u.kyc_status || '—'}</td>
+                                        <td style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.5)' }}>
+                                            {u.created_at ? new Date(u.created_at).toLocaleDateString('ar') : '—'}
+                                        </td>
+                                        <td>
+                                            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                                                {u.status !== 'active' && (
+                                                    <button className="btn-secondary" style={{ background: '#16a34a', color: '#fff', border: 'none', padding: '6px 10px', fontSize: 12 }} disabled={isBusy} onClick={() => handleChangeStatus(u, 'active')}>
+                                                        تفعيل
+                                                    </button>
+                                                )}
+                                                {u.status !== 'suspended' && (
+                                                    <button className="btn-secondary" style={{ background: '#f59e0b', color: '#fff', border: 'none', padding: '6px 10px', fontSize: 12 }} disabled={isBusy} onClick={() => handleChangeStatus(u, 'suspended')}>
+                                                        تعليق
+                                                    </button>
+                                                )}
+                                                {u.status !== 'banned' && (
+                                                    <button className="btn-secondary" style={{ background: '#7c2d12', color: '#fff', border: 'none', padding: '6px 10px', fontSize: 12 }} disabled={isBusy} onClick={() => handleChangeStatus(u, 'banned')}>
+                                                        حظر
+                                                    </button>
+                                                )}
+                                                <button className="btn-secondary" style={{ background: '#dc2626', color: '#fff', border: 'none', padding: '6px 10px', fontSize: 12 }} disabled={isBusy} onClick={() => handleDelete(u)}>
+                                                    حذف
+                                                </button>
+                                            </div>
+                                            {rowError?.id === u._id && (
+                                                <div style={{ color: '#f87171', fontSize: 11.5, marginTop: 6 }}>⚠️ {rowError.message}</div>
+                                            )}
+                                        </td>
+                                    </tr>
+                                )
+                            })}
+                        </tbody>
+                    </table>
+
+                    {totalPages > 1 && (
+                        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, marginTop: 20 }}>
+                            <button className="btn-secondary" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>السابق</button>
+                            <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)' }}>صفحة {page} من {totalPages}</span>
+                            <button className="btn-secondary" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>التالي</button>
+                        </div>
+                    )}
+                </>
+            )}
         </div>
     )
 }

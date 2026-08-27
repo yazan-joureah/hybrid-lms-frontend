@@ -90,13 +90,42 @@ function AppShell() {
     'grading-manager', 'live-controller', 'quiz-creator', 'instructor-analytics',
   ]
 
+  // صفحات أدمن فقط — أي navigate() لهدف هون من دور غير admin/superadmin
+  // بيرجّع المستخدم لداشبورده الطبيعي بدل ما يفتحلها.
+  // ⚠️ دي حماية فرونت بس (تجربة استخدام)، مش أمان فعلي — الأمان الحقيقي
+  // لازم middleware بالباك يتحقق من الدور على كل مسار /admin/*.
+  const adminOnlyPages: Page[] = [
+    'admin-dashboard', 'user-management', 'kyc-review', 'course-approval',
+    'refunds', 'platform-analytics', 'security-dashboard', 'audit-log',
+    'rbac', 'data-retention',
+  ]
+
+  const defaultPageForRole = useCallback((r: Role): Page => {
+    if (r === 'instructor') return instructorSetupIncomplete ? 'instructor-setup' : 'instructor-dashboard'
+    if (r === 'admin' || r === 'superadmin') return 'admin-dashboard'
+    return 'student-dashboard'
+  }, [instructorSetupIncomplete])
+
   const navigate = useCallback((target: Page) => {
+    if (adminOnlyPages.includes(target) && role !== 'admin' && role !== 'superadmin') {
+      setPageState(defaultPageForRole(role))
+      return
+    }
     if (instructorSetupIncomplete && instructorRestrictedPages.includes(target)) {
       setPageState('instructor-setup')
       return
     }
     setPageState(target)
-  }, [instructorSetupIncomplete])
+  }, [instructorSetupIncomplete, role, defaultPageForRole])
+
+  // لو الدور تغيّر ونحن واقفين أصلاً على صفحة أدمن (مثلاً بعد refreshUser)،
+  // منطلع منها فورًا.
+  useEffect(() => {
+    if (adminOnlyPages.includes(page) && role !== 'admin' && role !== 'superadmin') {
+      setPageState(defaultPageForRole(role))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [role, page])
 
   const applyUserSnapshot = (user: BackendUser) => {
     setUserName(user.full_name || '')
