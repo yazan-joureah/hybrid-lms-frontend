@@ -34,7 +34,7 @@ import CourseBuilder from './pages/instructor/CourseBuilder'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import AdminRefundReview from './pages/payments/admin/AdminRefundReview'
 
-// ---------- Route wrappers لاستخراج params من الـ URL الحقيقي ----------
+// --------- Route wrappers لاستخراج params من الـ URL الحقيقي ----------
 function VerifyCertificateRoute() {
   const { certificateId } = useParams<{ certificateId: string }>()
   if (!certificateId) return <Navigate to="/" replace />
