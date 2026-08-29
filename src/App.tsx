@@ -91,10 +91,6 @@ function AppShell() {
 
   // ✅ نفس توقيع navigate(page) القديم تمامًا — كل الصفحات (~50 ملف) بتضل شغالة بدون أي تعديل
   const navigate = useCallback((target: Page) => {
-    if (adminOnlyPages.includes(target) && role !== 'admin' && role !== 'superadmin') {
-      setPageState(defaultPageForRole(role))
-      return
-    }
     if (instructorSetupIncomplete && instructorRestrictedPages.includes(target)) {
       routerNavigate(PAGE_TO_PATH['instructor-setup'])
       return

@@ -4,7 +4,7 @@ import { KycTab } from './kyc/KycTab'
 import { CourseModerationTab } from './course-moderation/CourseModerationTab'
 
 export default function AdminDashboard() {
-    const [activeTab, setActiveTab] = useState<'kyc' | 'courses' | 'accounts'>('kyc')
+    const [activeTab, setActiveTab] = useState<'kyc' | 'courses'>('kyc')
 
     return (
         <div className="page-wrapper">
@@ -19,12 +19,9 @@ export default function AdminDashboard() {
                 <div className={`tab-item${activeTab === 'courses' ? ' active' : ''}`} onClick={() => setActiveTab('courses')}>
                     مراجعة الكورسات
                 </div>
-                <div className={`tab-item${activeTab === 'accounts' ? ' active' : ''}`} onClick={() => setActiveTab('accounts')}>
-                    إدارة الحسابات
-                </div>
             </div>
 
-            {activeTab === 'kyc' ? <KycTab /> : activeTab === 'courses' ? <CourseModerationTab /> : <AccountManagementTab />}
+            {activeTab === 'kyc' ? <KycTab /> : <CourseModerationTab />}
         </div>
     )
 }
