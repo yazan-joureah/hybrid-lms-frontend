@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNav, type Role } from '../context/NavContext'
 import { useAuthApi, mapRoleToBackend, getCodeErrorMessage } from '../context/AuthApiContext'
 import EdujarLogo from '../components/EdujarLogo'
-import OtpInput from '../components/common/OtpInput' // <-- إضافة
+import OtpInput from '../components/common/OtpInput'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 
@@ -42,9 +42,8 @@ export default function Register() {
   const [error, setError] = useState('')
   const [infoMsg, setInfoMsg] = useState('')
 
-  // خطوة تحقق الإيميل
-  const [otpCode, setOtpCode] = useState('')           // <-- تغيير
-  const [otpKey, setOtpKey] = useState(0)              // <-- جديد
+  const [otpCode, setOtpCode] = useState('')
+  const [otpKey, setOtpKey] = useState(0)
   const [otpError, setOtpError] = useState('')
   const [cooldown, setCooldown] = useState(0)
 
@@ -92,7 +91,6 @@ export default function Register() {
     }
   }
 
-  // OTP verification
   const handleVerifyEmail = async () => {
     if (otpCode.length !== 6) {
       setOtpError('أدخل الرمز المكوّن من 6 أرقام كاملاً')
@@ -152,7 +150,6 @@ export default function Register() {
 
       <div className="auth-content">
         <div className="auth-card" style={{ maxWidth: 500 }}>
-          {/* Steps */}
           <div style={{ display: 'flex', gap: 8, marginBottom: 28 }}>
             {[1, 2, 3].map(s => (
               <div key={s} style={{ flex: 1, height: 3, borderRadius: 3, background: step >= s ? 'linear-gradient(90deg, #7c3aed, #a855f7)' : 'rgba(255,255,255,0.1)', transition: 'background 0.3s' }} />
@@ -315,7 +312,6 @@ export default function Register() {
                 >{loading ? '...جارٍ إنشاء الحساب' : 'إنشاء الحساب'}</button>
               </div>
 
-              {/* --- زر Google --- */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 20, marginBottom: 10 }}>
                 <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
                 <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)' }}>أو</span>
@@ -346,7 +342,6 @@ export default function Register() {
                 </p>
               </div>
 
-              {/* استخدم OtpInput بدلاً من الخانات اليدوية */}
               <div style={{ marginBottom: 6 }}>
                 <OtpInput key={otpKey} onComplete={setOtpCode} error={!!otpError} disabled={loading} />
               </div>

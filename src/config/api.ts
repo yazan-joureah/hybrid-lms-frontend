@@ -1,32 +1,18 @@
 // src/config/api.ts
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios'
 
-// TODO: عدّل هاد الرابط إذا الباك شغال على بورت أو دومين مختلف
+// الآن اتصال Cross-Origin مباشر (Vercel → Render) — لا حاجة لـ Same-Origin Proxy
+// بعد ما استبدلنا Double-Submit Cookie بـ Origin Validation في الباك اند.
 export const BASE_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3000/api/v1'
 
 const API = axios.create({
   baseURL: BASE_URL,
-  withCredentials: true, // يبعث الكوكيز (refresh_token, csrf_token)
+  withCredentials: true, // يبعث refresh_token (HttpOnly) تلقائيًا — هذا وحده الكافي الآن
 })
 
-function getCookie(name: string): string | null {
-  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'))
-  return match ? match[2] : null
-}
-
-// إضافة CSRF token تلقائيًا لأي request مش GET
-API.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => {
-    if (!['get', 'options'].includes(config.method?.toLowerCase() || '')) {
-      const csrfToken = getCookie('csrf_token')
-      if (csrfToken && config.headers) {
-        config.headers['X-CSRF-Token'] = csrfToken
-      }
-    }
-    return config
-  },
-  (error) => Promise.reject(error)
-)
+// ❌ حُذفت getCookie() بالكامل — ما عاد في csrf_token نقرأه أو نرسله.
+// المتصفح نفسه بيرسل هيدر Origin تلقائيًا مع كل طلب cross-site،
+// والباك اند بيتحقق منه مباشرة عبر requireTrustedOrigin — بدون أي تدخل من الفرونت.
 
 let isRefreshing = false
 let failedQueue: { resolve: (token: string | null) => void; reject: (err: unknown) => void }[] = []
@@ -36,7 +22,6 @@ const processQueue = (error: unknown, token: string | null = null) => {
   failedQueue = []
 }
 
-// نقاط دخول عامة لا تحتاج محاولة refresh عند فشلها
 const publicAuthEndpoints = [
   '/auth/login',
   '/auth/register',

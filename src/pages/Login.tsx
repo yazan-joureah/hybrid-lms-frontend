@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNav } from '../context/NavContext'
 import { useAuthApi, normalizeRole, computeFallbackPage } from '../context/AuthApiContext'
 import EdujarLogo from '../components/EdujarLogo'
-import OtpInput from '../components/common/OtpInput' // <-- إضافة
+import OtpInput from '../components/common/OtpInput'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 
@@ -30,20 +30,19 @@ export default function Login() {
   const [emailTouched, setEmailTouched] = useState(false)
   const [error, setError] = useState('')
 
-  // خطوة التحقق الثنائي (MFA)
+  // MFA
   const [mfaStep, setMfaStep] = useState(false)
-  const [mfaCode, setMfaCode] = useState('')               // <-- تغيير
-  const [mfaOtpKey, setMfaOtpKey] = useState(0)            // <-- جديد
+  const [mfaCode, setMfaCode] = useState('')
+  const [mfaOtpKey, setMfaOtpKey] = useState(0)
   const [mfaError, setMfaError] = useState('')
 
-  // خطوات إضافية جاية من redirect الباك بعد Google
+  // Google OAuth flows
   const [oauthView, setOauthView] = useState<OAuthView>('none')
   const [oauthToken, setOauthToken] = useState('')
   const [oauthLoading, setOauthLoading] = useState(false)
   const [oauthError, setOauthError] = useState('')
   const [googleRestoring, setGoogleRestoring] = useState(false)
 
-  // حقول Google
   const [birthDate, setBirthDate] = useState('')
   const [oauthRole, setOauthRole] = useState<'Student' | 'Instructor'>('Student')
   const [linkPassword, setLinkPassword] = useState('')
@@ -52,19 +51,20 @@ export default function Login() {
 
   const emailValid = EMAIL_RE.test(email)
 
+  // ✅ الدالة الأساسية لتطبيق حالة المستخدم مع تحديث المصادقة
   const applyLoggedInUser = (user: any) => {
     const role = normalizeRole(user?.role)
+    login(role)   // 🟢 الإصلاح الجوهري: تحديث isAuthenticated في App
     setUserName(user?.full_name || email.trim().split('@')[0] || 'مستخدم')
     setUserEmail(user?.email || email.trim().toLowerCase())
     navigate(computeFallbackPage(user))
   }
 
-  // إزالة التوكنات/الأكواد من الـ URL
   const cleanUrl = () => {
     window.history.replaceState({}, '', window.location.pathname)
   }
 
-  // ------- التقاط رد الباك بعد Google -------
+  // استعادة جلسة Google
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const step = params.get('oauth_step')
@@ -142,7 +142,6 @@ export default function Login() {
     }
   }
 
-  // MFA verification
   const handleMfaVerify = async () => {
     if (mfaCode.length !== 6) {
       setMfaError('أدخل الرمز المكوّن من 6 أرقام كاملاً')
@@ -156,13 +155,13 @@ export default function Login() {
     } catch (err) {
       setMfaError(getErrorMessage(err))
       setMfaCode('')
-      setMfaOtpKey(k => k + 1)  // إعادة تعيين حقل OTP
+      setMfaOtpKey(k => k + 1)
     } finally {
       setLoading(false)
     }
   }
 
-  // ------- Handlers لخطوات Google -------
+  // Google flows
   const handleGoogleRegisterSubmit = async () => {
     if (!birthDate) {
       setOauthError('اختر تاريخ الميلاد')
@@ -231,7 +230,6 @@ export default function Login() {
     setOauthGuardianSent(false)
   }
 
-  // ------- شاشة انتظار استعادة الجلسة بعد نجاح Google -------
   if (googleRestoring) {
     return (
       <div className="auth-shell">
@@ -249,14 +247,12 @@ export default function Login() {
       background: 'linear-gradient(135deg, #080320 0%, #1a0550 40%, #0d0340 100%)',
       display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden',
     }}>
-      {/* Background blobs */}
       <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
         <div style={{ position: 'absolute', top: '15%', right: '10%', width: 400, height: 400, borderRadius: '50%', background: 'radial-gradient(circle, rgba(124,58,237,0.22) 0%, transparent 70%)' }} />
         <div style={{ position: 'absolute', bottom: '10%', left: '8%', width: 350, height: 350, borderRadius: '50%', background: 'radial-gradient(circle, rgba(168,85,247,0.16) 0%, transparent 70%)' }} />
         <div style={{ position: 'absolute', top: '60%', right: '45%', width: 250, height: 250, borderRadius: '50%', background: 'radial-gradient(circle, rgba(245,158,11,0.06) 0%, transparent 70%)' }} />
       </div>
 
-      {/* Header */}
       <div className="auth-header">
         <button onClick={() => navigate('landing')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
           <EdujarLogo width={130} height={34} />
@@ -264,10 +260,9 @@ export default function Login() {
         <button className="btn-ghost" onClick={() => navigate('landing')}>الرئيسية</button>
       </div>
 
-      {/* Card */}
       <div className="auth-content">
         <div className="auth-card" style={{ maxWidth: 460 }}>
-          {/* ---------- خطوات Google الوسيطة ---------- */}
+          {/* Google OAuth sub‑flows */}
           {oauthView === 'google-register' && (
             <div style={{ textAlign: 'right' }}>
               <div style={{ textAlign: 'center', marginBottom: 20 }}>
@@ -276,7 +271,6 @@ export default function Login() {
                 <p style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.5)', margin: 0 }}>نحتاج تاريخ ميلادك ونوع الحساب لإتمام إنشاء حسابك</p>
               </div>
 
-              {/* اختيار الدور */}
               <div style={{ marginBottom: 16 }}>
                 <label className="form-label">نوع الحساب</label>
                 <div style={{ display: 'flex', gap: 16, marginTop: 6 }}>
@@ -305,7 +299,6 @@ export default function Login() {
                 </div>
               </div>
 
-              {/* تاريخ الميلاد */}
               <div style={{ marginBottom: 16 }}>
                 <label className="form-label">تاريخ الميلاد</label>
                 <input className="form-input" type="date" value={birthDate} onChange={e => setBirthDate(e.target.value)} disabled={oauthLoading} />
@@ -374,10 +367,9 @@ export default function Login() {
             </div>
           )}
 
-          {/* ---------- فورم تسجيل الدخول العادي ---------- */}
+          {/* Normal login */}
           {oauthView === 'none' && !mfaStep && (
             <>
-              {/* Icon */}
               <div style={{ textAlign: 'center', marginBottom: 24 }}>
                 <div style={{
                   width: 60, height: 60, borderRadius: '50%',
@@ -386,13 +378,13 @@ export default function Login() {
                   margin: '0 auto 16px', fontSize: 26,
                 }}>☀</div>
                 <h1 style={{ fontSize: 24, fontWeight: 800, margin: '0 0 6px' }}>
-                  مرحباً بعودتك إلى <span className="gradient-text">Hybrid LMS!</span>                </h1>
+                  مرحباً بعودتك إلى <span className="gradient-text">Hybrid LMS!</span>
+                </h1>
                 <p style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.5)', margin: 0 }}>
                   سجّل دخولك للوصول إلى كورساتك
                 </p>
               </div>
 
-              {/* Form */}
               <div style={{ marginBottom: 16 }}>
                 <label className="form-label">البريد الإلكتروني</label>
                 <input
@@ -487,7 +479,7 @@ export default function Login() {
             </>
           )}
 
-          {/* ---------- خطوة التحقق الثنائي (MFA) ---------- */}
+          {/* MFA step */}
           {oauthView === 'none' && mfaStep && (
             <>
               <div style={{ textAlign: 'center', marginBottom: 24 }}>
@@ -496,7 +488,6 @@ export default function Login() {
                 <p style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.5)', margin: 0 }}>أدخل الرمز المكوّن من 6 أرقام من تطبيق المصادقة</p>
               </div>
 
-              {/* استخدم OtpInput بدلاً من الخانات اليدوية */}
               <div style={{ marginBottom: 6 }}>
                 <OtpInput key={mfaOtpKey} onComplete={setMfaCode} error={!!mfaError} disabled={loading} />
               </div>
@@ -529,7 +520,8 @@ export default function Login() {
       </div>
 
       <div style={{ padding: '16px 28px', textAlign: 'center', position: 'relative', zIndex: 1 }}>
-        <p style={{ color: 'rgba(255,255,255,0.28)', fontSize: 12 }}>© 2026 Hybrid LMS. جميع الحقوق محفوظة. | سياسة الخصوصية | شروط الخدمة</p>      </div>
+        <p style={{ color: 'rgba(255,255,255,0.28)', fontSize: 12 }}>© 2026 Hybrid LMS. جميع الحقوق محفوظة. | سياسة الخصوصية | شروط الخدمة</p>
+      </div>
     </div>
   )
 }
