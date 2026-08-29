@@ -71,7 +71,7 @@ interface AuthApiContextType {
   resetPassword: (email: string, code: string, newPassword: string) => Promise<void>
   // Google OAuth
   googleLogin: () => void
-  googleRegisterConfirm: (token: string, birthDate: string) => Promise<{ user?: BackendUser; requiresGuardianEmail?: boolean; guardianPendingToken?: string }>
+  googleRegisterConfirm: (token: string, birthDate: string, role: 'Student' | 'Instructor') => Promise<{ user?: BackendUser; requiresGuardianEmail?: boolean; guardianPendingToken?: string }>
   googleLinkConfirm: (token: string, password: string) => Promise<{ user?: BackendUser }>
   googleGuardianEmail: (token: string, guardianEmail: string) => Promise<void>
   // جديد — استعادة الجلسة (مطلوبة بعد نجاح Google، وأيضًا عند تحميل التطبيق
@@ -145,6 +145,22 @@ export function AuthApiProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('session_active')
     delete API.defaults.headers.common.Authorization
     setMfaTempToken(null)
+
+    // ✅ تنظيف أي أثر لآخر كورس/تسجيل كان مفتوح، حتى ما يرجّع المستخدم
+    // (أو مستخدم تاني عالجهاز نفسه) تلقائياً لنفس المكان بعد تسجيل دخول جديد.
+    // sessionStorage.clear() ما بنستخدمها لأنه ممكن يكون فيها مفاتيح تانية
+    // مستقبلية لأغراض تانية — بنمسح فقط يلي يخص "آخر مكان مفتوح بالمشغّل".
+    try {
+      sessionStorage.removeItem('selected_enrollment_id')
+      const keysToRemove: string[] = []
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i)
+        if (key && key.startsWith('course_player_selection:')) keysToRemove.push(key)
+      }
+      keysToRemove.forEach(key => sessionStorage.removeItem(key))
+    } catch {
+      // بيئات بدون sessionStorage — نتجاهل بأمان
+    }
   }
 
   // ⚠️ افتراض غير مؤكد: نفس نمط الكود المرجعي القديم
@@ -214,10 +230,11 @@ export function AuthApiProvider({ children }: { children: ReactNode }) {
     window.location.href = `${BASE_URL}/auth/google`
   }
 
-  const googleRegisterConfirm: AuthApiContextType['googleRegisterConfirm'] = async (token, birthDate) => {
+  const googleRegisterConfirm: AuthApiContextType['googleRegisterConfirm'] = async (token, birthDate, role) => {
     const res = await API.post('/auth/google/register/confirm', {
       registration_pending_token: token,
       birth_date: birthDate,
+      role,
     })
     const data = res.data?.data
     if (data?.requires_guardian_email) {

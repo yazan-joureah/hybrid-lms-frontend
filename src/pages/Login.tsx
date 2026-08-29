@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNav } from '../context/NavContext'
-import { useAuthApi, normalizeRole } from '../context/AuthApiContext'
+import { useAuthApi, normalizeRole, computeFallbackPage } from '../context/AuthApiContext'
 import EdujarLogo from '../components/EdujarLogo'
+import OtpInput from '../components/common/OtpInput' // <-- إضافة
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 
@@ -29,22 +30,25 @@ export default function Login() {
   const [emailTouched, setEmailTouched] = useState(false)
   const [error, setError] = useState('')
 
-  // خطوة التحقق الثنائي (MFA) — بتظهر إذا الباك طلبها بعد اللوجن العادي
-  // أو إذا رجعت من Google بحساب مفعّل عليه MFA (?oauth_step=mfa)
+  // خطوة التحقق الثنائي (MFA)
   const [mfaStep, setMfaStep] = useState(false)
-  const [mfaDigits, setMfaDigits] = useState(['', '', '', '', '', ''])
+  const [mfaCode, setMfaCode] = useState('')               // <-- تغيير
+  const [mfaOtpKey, setMfaOtpKey] = useState(0)            // <-- جديد
   const [mfaError, setMfaError] = useState('')
 
-  // خطوات إضافية جاية من redirect الباك بعد Google (register/link/guardian)
+  // خطوات إضافية جاية من redirect الباك بعد Google
   const [oauthView, setOauthView] = useState<OAuthView>('none')
   const [oauthToken, setOauthToken] = useState('')
   const [oauthLoading, setOauthLoading] = useState(false)
   const [oauthError, setOauthError] = useState('')
   const [googleRestoring, setGoogleRestoring] = useState(false)
 
+  // حقول Google
   const [birthDate, setBirthDate] = useState('')
+  const [oauthRole, setOauthRole] = useState<'Student' | 'Instructor'>('Student')
   const [linkPassword, setLinkPassword] = useState('')
   const [guardianEmail, setGuardianEmail] = useState('')
+  const [oauthGuardianSent, setOauthGuardianSent] = useState(false)
 
   const emailValid = EMAIL_RE.test(email)
 
@@ -52,21 +56,15 @@ export default function Login() {
     const role = normalizeRole(user?.role)
     setUserName(user?.full_name || email.trim().split('@')[0] || 'مستخدم')
     setUserEmail(user?.email || email.trim().toLowerCase())
-    login(role)
+    navigate(computeFallbackPage(user))
   }
 
-  // إزالة التوكنات/الأكواد من الـ URL بعد قراءتها — ما لازم تضل بسجل المتصفح
+  // إزالة التوكنات/الأكواد من الـ URL
   const cleanUrl = () => {
     window.history.replaceState({}, '', window.location.pathname)
   }
 
   // ------- التقاط رد الباك بعد Google -------
-  // الباك (oauth.controller.js) بيعمل res.redirect() حقيقي على /login بـ:
-  //   ?oauth_step=google-register&token=...
-  //   ?oauth_step=google-link&token=...
-  //   ?oauth_step=mfa&token=...
-  //   ?oauth_error=...
-  // أو على /dashboard?auth=google_success (refresh_token بالكوكي فقط، بدون access_token بالـ URL)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const step = params.get('oauth_step')
@@ -144,35 +142,27 @@ export default function Login() {
     }
   }
 
-  const handleMfaDigit = (idx: number, val: string) => {
-    if (val.length > 1) return
-    const next = [...mfaDigits]
-    next[idx] = val.replace(/[^0-9]/g, '')
-    setMfaDigits(next)
-    if (val && idx < 5) {
-      document.getElementById(`login-mfa-${idx + 1}`)?.focus()
-    }
-  }
-
+  // MFA verification
   const handleMfaVerify = async () => {
-    const code = mfaDigits.join('')
-    if (code.length !== 6) {
+    if (mfaCode.length !== 6) {
       setMfaError('أدخل الرمز المكوّن من 6 أرقام كاملاً')
       return
     }
     setMfaError('')
     setLoading(true)
     try {
-      const result = await apiVerifyMfa(code)
+      const result = await apiVerifyMfa(mfaCode)
       if (result.user) applyLoggedInUser(result.user)
     } catch (err) {
       setMfaError(getErrorMessage(err))
+      setMfaCode('')
+      setMfaOtpKey(k => k + 1)  // إعادة تعيين حقل OTP
     } finally {
       setLoading(false)
     }
   }
 
-  // ------- Handlers لخطوات Google (كانت بـ GoogleCallback.tsx القديم) -------
+  // ------- Handlers لخطوات Google -------
   const handleGoogleRegisterSubmit = async () => {
     if (!birthDate) {
       setOauthError('اختر تاريخ الميلاد')
@@ -181,7 +171,7 @@ export default function Login() {
     setOauthError('')
     setOauthLoading(true)
     try {
-      const result = await googleRegisterConfirm(oauthToken, birthDate)
+      const result = await googleRegisterConfirm(oauthToken, birthDate, oauthRole)
       if (result.requiresGuardianEmail && result.guardianPendingToken) {
         setOauthToken(result.guardianPendingToken)
         setOauthView('google-guardian')
@@ -222,13 +212,6 @@ export default function Login() {
     try {
       await googleGuardianEmail(oauthToken, guardianEmail.trim())
       setOauthView('none')
-      setError('')
-      // رسالة نجاح مؤقتة بمكان رسالة الخطأ العامة بصفحة اللوجن
-      setError('')
-      setOauthError('')
-      setEmail('')
-      setTimeout(() => { }, 0)
-      // إشعار بسيط للمستخدم إنه الطلب انبعث، ورجوع لفورم اللوجن العادي
       setOauthGuardianSent(true)
     } catch (err) {
       setOauthError(getErrorMessage(err))
@@ -237,13 +220,12 @@ export default function Login() {
     }
   }
 
-  const [oauthGuardianSent, setOauthGuardianSent] = useState(false)
-
   const resetOauthFlow = () => {
     setOauthView('none')
     setOauthToken('')
     setOauthError('')
     setBirthDate('')
+    setOauthRole('Student')
     setLinkPassword('')
     setGuardianEmail('')
     setOauthGuardianSent(false)
@@ -252,11 +234,7 @@ export default function Login() {
   // ------- شاشة انتظار استعادة الجلسة بعد نجاح Google -------
   if (googleRestoring) {
     return (
-      <div style={{
-        minHeight: '100vh', direction: 'rtl',
-        background: 'linear-gradient(135deg, #080320 0%, #1a0550 40%, #0d0340 100%)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}>
+      <div className="auth-shell">
         <div style={{ textAlign: 'center' }}>
           <div style={{ fontSize: 36, marginBottom: 16 }}>⏳</div>
           <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14 }}>جارٍ إكمال تسجيل الدخول عبر Google...</p>
@@ -279,7 +257,7 @@ export default function Login() {
       </div>
 
       {/* Header */}
-      <div style={{ padding: '20px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', zIndex: 1 }}>
+      <div className="auth-header">
         <button onClick={() => navigate('landing')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
           <EdujarLogo width={130} height={34} />
         </button>
@@ -287,25 +265,52 @@ export default function Login() {
       </div>
 
       {/* Card */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px 16px', position: 'relative', zIndex: 1 }}>
-        <div style={{
-          width: '100%', maxWidth: 460,
-          background: 'rgba(16,6,52,0.85)', backdropFilter: 'blur(28px)',
-          border: '1px solid rgba(255,255,255,0.1)', borderRadius: 24,
-          padding: '40px 36px', boxShadow: '0 24px 80px rgba(0,0,0,0.55)',
-        }}>
-          {/* ---------- خطوات Google الوسيطة (register / link / guardian) ---------- */}
+      <div className="auth-content">
+        <div className="auth-card" style={{ maxWidth: 460 }}>
+          {/* ---------- خطوات Google الوسيطة ---------- */}
           {oauthView === 'google-register' && (
             <div style={{ textAlign: 'right' }}>
               <div style={{ textAlign: 'center', marginBottom: 20 }}>
                 <div style={{ fontSize: 36, marginBottom: 12 }}>🎂</div>
                 <h1 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 8px' }}>خطوة أخيرة</h1>
-                <p style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.5)', margin: 0 }}>نحتاج تاريخ ميلادك لإتمام إنشاء حسابك</p>
+                <p style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.5)', margin: 0 }}>نحتاج تاريخ ميلادك ونوع الحساب لإتمام إنشاء حسابك</p>
               </div>
+
+              {/* اختيار الدور */}
+              <div style={{ marginBottom: 16 }}>
+                <label className="form-label">نوع الحساب</label>
+                <div style={{ display: 'flex', gap: 16, marginTop: 6 }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, cursor: 'pointer' }}>
+                    <input
+                      type="radio"
+                      name="oauthRole"
+                      value="Student"
+                      checked={oauthRole === 'Student'}
+                      onChange={() => setOauthRole('Student')}
+                      disabled={oauthLoading}
+                    />
+                    طالب
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, cursor: 'pointer' }}>
+                    <input
+                      type="radio"
+                      name="oauthRole"
+                      value="Instructor"
+                      checked={oauthRole === 'Instructor'}
+                      onChange={() => setOauthRole('Instructor')}
+                      disabled={oauthLoading}
+                    />
+                    مدرّس
+                  </label>
+                </div>
+              </div>
+
+              {/* تاريخ الميلاد */}
               <div style={{ marginBottom: 16 }}>
                 <label className="form-label">تاريخ الميلاد</label>
                 <input className="form-input" type="date" value={birthDate} onChange={e => setBirthDate(e.target.value)} disabled={oauthLoading} />
               </div>
+
               {oauthError && <div style={{ color: '#f87171', fontSize: 13, marginBottom: 14 }}>⚠️ {oauthError}</div>}
               <button className="btn-primary" style={{ width: '100%', justifyContent: 'center', padding: '13px', fontSize: 15 }} onClick={handleGoogleRegisterSubmit} disabled={oauthLoading}>
                 {oauthLoading ? '...جارٍ الحفظ' : 'إكمال التسجيل'}
@@ -369,7 +374,7 @@ export default function Login() {
             </div>
           )}
 
-          {/* ---------- فورم تسجيل الدخول / MFA العادي (يظهر فقط لما ما في خطوة Google معلّقة) ---------- */}
+          {/* ---------- فورم تسجيل الدخول العادي ---------- */}
           {oauthView === 'none' && !mfaStep && (
             <>
               {/* Icon */}
@@ -381,8 +386,7 @@ export default function Login() {
                   margin: '0 auto 16px', fontSize: 26,
                 }}>☀</div>
                 <h1 style={{ fontSize: 24, fontWeight: 800, margin: '0 0 6px' }}>
-                  مرحباً بعودتك إلى <span className="gradient-text">Edujar!</span>
-                </h1>
+                  مرحباً بعودتك إلى <span className="gradient-text">Hybrid LMS!</span>                </h1>
                 <p style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.5)', margin: 0 }}>
                   سجّل دخولك للوصول إلى كورساتك
                 </p>
@@ -483,7 +487,7 @@ export default function Login() {
             </>
           )}
 
-          {/* ---------- خطوة التحقق الثنائي (MFA) — لوجن عادي أو Google ---------- */}
+          {/* ---------- خطوة التحقق الثنائي (MFA) ---------- */}
           {oauthView === 'none' && mfaStep && (
             <>
               <div style={{ textAlign: 'center', marginBottom: 24 }}>
@@ -492,25 +496,9 @@ export default function Login() {
                 <p style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.5)', margin: 0 }}>أدخل الرمز المكوّن من 6 أرقام من تطبيق المصادقة</p>
               </div>
 
-              <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginBottom: 6 }} dir="ltr">
-                {mfaDigits.map((v, i) => (
-                  <input
-                    key={i}
-                    id={`login-mfa-${i}`}
-                    value={v}
-                    onChange={e => handleMfaDigit(i, e.target.value)}
-                    maxLength={1}
-                    disabled={loading}
-                    style={{
-                      width: 48, height: 54, borderRadius: 12,
-                      background: 'rgba(255,255,255,0.07)',
-                      border: `1.5px solid ${mfaError ? '#ef4444' : v ? '#7c3aed' : 'rgba(255,255,255,0.15)'}`,
-                      color: '#fff', fontSize: 22, fontWeight: 700,
-                      textAlign: 'center', outline: 'none', fontFamily: 'inherit',
-                      transition: 'border-color 0.15s',
-                    }}
-                  />
-                ))}
+              {/* استخدم OtpInput بدلاً من الخانات اليدوية */}
+              <div style={{ marginBottom: 6 }}>
+                <OtpInput key={mfaOtpKey} onComplete={setMfaCode} error={!!mfaError} disabled={loading} />
               </div>
 
               {mfaError && <div style={{ textAlign: 'center', color: '#f87171', fontSize: 13, marginBottom: 12, marginTop: 4 }}>{mfaError}</div>}
@@ -523,7 +511,16 @@ export default function Login() {
               >
                 {loading ? '...جارٍ التحقق' : 'تحقق ودخول'}
               </button>
-              <button className="btn-ghost" style={{ width: '100%', justifyContent: 'center' }} onClick={() => { setMfaStep(false); setMfaDigits(['', '', '', '', '', '']); setMfaError('') }}>
+              <button
+                className="btn-ghost"
+                style={{ width: '100%', justifyContent: 'center' }}
+                onClick={() => {
+                  setMfaStep(false)
+                  setMfaCode('')
+                  setMfaOtpKey(k => k + 1)
+                  setMfaError('')
+                }}
+              >
                 ← رجوع لتسجيل الدخول
               </button>
             </>
@@ -532,8 +529,7 @@ export default function Login() {
       </div>
 
       <div style={{ padding: '16px 28px', textAlign: 'center', position: 'relative', zIndex: 1 }}>
-        <p style={{ color: 'rgba(255,255,255,0.28)', fontSize: 12 }}>© 2026 Edujar. جميع الحقوق محفوظة. | سياسة الخصوصية | شروط الخدمة</p>
-      </div>
+        <p style={{ color: 'rgba(255,255,255,0.28)', fontSize: 12 }}>© 2026 Hybrid LMS. جميع الحقوق محفوظة. | سياسة الخصوصية | شروط الخدمة</p>      </div>
     </div>
   )
 }

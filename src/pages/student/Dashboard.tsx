@@ -38,18 +38,21 @@ export default function StudentDashboard() {
   return (
     <div className="page-wrapper">
       {/* Welcome banner */}
-      <div style={{
-        background: 'linear-gradient(135deg, rgba(124,58,237,0.3) 0%, rgba(168,85,247,0.15) 100%)',
-        border: '1px solid rgba(124,58,237,0.3)', borderRadius: 20,
-        padding: '24px 28px', marginBottom: 28, display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        position: 'relative', overflow: 'hidden',
-      }}>
+      <div
+        style={{
+          background: 'linear-gradient(135deg, rgba(124,58,237,0.3) 0%, rgba(168,85,247,0.15) 100%)',
+          border: '1px solid rgba(124,58,237,0.3)', borderRadius: 20,
+          padding: '24px 28px', marginBottom: 28,
+          position: 'relative', overflow: 'hidden',
+        }}
+        className="dash-welcome-banner"
+      >
         <div style={{ position: 'absolute', top: -30, left: -30, width: 150, height: 150, borderRadius: '50%', background: 'rgba(124,58,237,0.15)', filter: 'blur(40px)' }} />
         <div style={{ position: 'relative' }}>
           <h2 style={{ fontSize: 24, fontWeight: 800, margin: '0 0 6px' }}>مرحباً يا {(userName || 'صديقنا').split(' ')[0]}! 👋</h2>
           <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: 14, margin: 0 }}>لديك 3 دروس هذا الأسبوع. استمر في التقدم!</p>
         </div>
-        <div style={{ display: 'flex', gap: 10, flexShrink: 0 }}>
+        <div className="dash-welcome-actions">
           <button className="btn-primary" style={{ padding: '10px 22px', fontSize: 14 }} onClick={() => navigate('my-courses')}>
             متابعة التعلم
           </button>
@@ -60,7 +63,7 @@ export default function StudentDashboard() {
       </div>
 
       {/* Metrics */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 18, marginBottom: 28 }}>
+      <div className="grid-4" style={{ marginBottom: 28 }}>
         {[
           { icon: '📈', label: 'التقدم الكلي', value: '68%', sub: '+5% هذا الأسبوع', color: '#7c3aed' },
           { icon: '✅', label: 'نسبة الحضور', value: '87%', sub: '26 من 30 حصة', color: '#10b981' },
@@ -78,7 +81,7 @@ export default function StudentDashboard() {
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 22, marginBottom: 28 }}>
+      <div className="dash-main-grid">
         {/* Enrolled courses */}
         <div style={{ background: 'var(--bg-card)', backdropFilter: 'blur(20px)', border: '1px solid var(--border)', borderRadius: 18, padding: '22px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
@@ -147,7 +150,7 @@ export default function StudentDashboard() {
               })}
             </div>
             <div style={{ display: 'flex', gap: 16, marginTop: 12 }}>
-              {[['#10b981','حاضر'],['rgba(239,68,68,0.7)','غائب'],['rgba(255,255,255,0.15)','قادم']].map(([c,l]) => (
+              {[['#10b981', 'حاضر'], ['rgba(239,68,68,0.7)', 'غائب'], ['rgba(255,255,255,0.15)', 'قادم']].map(([c, l]) => (
                 <div key={l} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: 'rgba(255,255,255,0.5)' }}>
                   <div style={{ width: 10, height: 10, borderRadius: 2, background: c }} />{l}
                 </div>
@@ -160,10 +163,10 @@ export default function StudentDashboard() {
       {/* Weekly schedule */}
       <div style={{ background: 'var(--bg-card)', backdropFilter: 'blur(20px)', border: '1px solid var(--border)', borderRadius: 18, padding: '22px' }}>
         <h3 style={{ fontSize: 17, fontWeight: 700, margin: '0 0 18px' }}>الجدول الأسبوعي</h3>
-        <div style={{ display: 'flex', gap: 12 }}>
+        <div className="dash-weekly-schedule">
           {schedule.map((s, i) => (
             <div key={i} style={{
-              flex: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)',
+              background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)',
               borderRadius: 14, padding: '14px 12px', textAlign: 'center',
               borderTop: `3px solid ${s.color}`,
             }}>

@@ -5,8 +5,8 @@ import { useAuthApi } from '../../context/AuthApiContext'
 import API from '../../config/api'
 
 export default function InstructorSetup() {
-    const { refreshUser } = useNav()
-    const { setupMfa, confirmMfa, logout } = useAuthApi()
+    const { refreshUser, logout } = useNav()
+    const { setupMfa, confirmMfa } = useAuthApi()
 
     // MFA state
     const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('')
@@ -118,7 +118,7 @@ export default function InstructorSetup() {
                 </p>
 
                 {/* مؤشر الخطوات */}
-                <div style={{ display: 'flex', gap: 16, marginBottom: 24, borderBottom: '1px solid var(--border)', paddingBottom: 16 }}>
+                <div style={{ display: 'flex', gap: 16, marginBottom: 24, borderBottom: '1px solid var(--border)', paddingBottom: 16, flexWrap: 'wrap' }}>
                     <span className="badge" style={{
                         background: step === 1 ? 'rgba(124,58,237,0.2)' : 'rgba(255,255,255,0.08)',
                         color: step === 1 ? '#c4b5fd' : 'var(--text-subtle)',

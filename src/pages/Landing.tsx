@@ -1,37 +1,12 @@
-import { useRef, useState } from 'react'
+import { useRef } from 'react'
 import { useNav } from '../context/NavContext'
 import EdujarLogo from '../components/EdujarLogo'
+import { useCourseCatalog } from '../hooks/course/useCourseCatalog'
+import { CourseFilterBar } from '../components/course/CourseFilterBar'
+import { CourseCard } from '../components/course/CourseCard'
+import { SkeletonLoader } from '../components/common/Loading'
 
-const allCourses = [
-  { id: 1, img: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400&h=220&fit=crop&auto=format', category: 'التطوير', level: 'متوسط', title: 'Python للتحليل المالي والتداول الخوارزمي', instructor: 'أحمد عبدالله', students: '+50', rating: 4, price: '299 ر.س' },
-  { id: 2, img: 'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=220&fit=crop&auto=format', category: 'التصميم', level: 'مبتدئ', title: 'تصميم واجهات المستخدم بـ Figma من الصفر', instructor: 'سارة الأحمد', students: '+80', rating: 5, price: '199 ر.س' },
-  { id: 3, img: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=400&h=220&fit=crop&auto=format', category: 'التطوير', level: 'متقدم', title: 'React المتقدم وإدارة الحالة بـ Redux', instructor: 'محمد الخالدي', students: '+120', rating: 5, price: '349 ر.س' },
-  { id: 4, img: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=220&fit=crop&auto=format', category: 'الأعمال', level: 'مبتدئ', title: 'إدارة المشاريع باحترافية', instructor: 'ليلى الكندي', students: '+60', rating: 4, price: '249 ر.س' },
-  { id: 5, img: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=400&h=220&fit=crop&auto=format', category: 'علم البيانات', level: 'متوسط', title: 'تعلم الآلة بـ Python من الصفر', instructor: 'عمر التقني', students: '+90', rating: 5, price: '399 ر.س' },
-  { id: 6, img: 'https://images.unsplash.com/photo-1561089489-f13d5e730d72?w=400&h=220&fit=crop&auto=format', category: 'التصميم', level: 'متقدم', title: 'تجربة المستخدم المتقدمة (UX Research)', instructor: 'نور الرشيد', students: '+45', rating: 5, price: '279 ر.س' },
-  { id: 7, img: 'https://images.unsplash.com/photo-1432888498266-38ffec3eaf0a?w=400&h=220&fit=crop&auto=format', category: 'التسويق', level: 'مبتدئ', title: 'التسويق الرقمي الشامل', instructor: 'دانة العمري', students: '+70', rating: 4, price: '179 ر.س' },
-  { id: 8, img: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=400&h=220&fit=crop&auto=format', category: 'الأعمال', level: 'متقدم', title: 'ريادة الأعمال وبناء الشركات الناشئة', instructor: 'خالد السعيد', students: '+35', rating: 5, price: '449 ر.س' },
-  { id: 9, img: 'https://images.unsplash.com/photo-1518186285589-2f7649de83e0?w=400&h=220&fit=crop&auto=format', category: 'علم البيانات', level: 'متقدم', title: 'الشبكات العصبية وتعلم العمق', instructor: 'يوسف الأحمد', students: '+55', rating: 5, price: '499 ر.س' },
-]
-
-const categories = ['الكل', 'التطوير', 'التصميم', 'الأعمال', 'علم البيانات', 'التسويق']
-
-const features = [
-  { icon: '📡', title: 'حصص مباشرة', desc: 'شارك في دروس مباشرة تفاعلية مع خبراء الصناعة' },
-  { icon: '📝', title: 'اختبارات تفاعلية', desc: 'اختبر معرفتك وتتبع تقدمك بالاختبارات الذكية' },
-  { icon: '👥', title: 'مراجعة الأقران', desc: 'احصل على تغذية راجعة بنّاءة من زملائك' },
-  { icon: '🤖', title: 'مساعد الذكاء الاصطناعي', desc: 'احصل على إجابات فورية ومخصصة بمساعد الذكاء الاصطناعي' },
-]
-
-const partners = [
-  { name: 'HubSpot', initial: 'H', color: '#f97316' },
-  { name: 'GitLab', initial: 'G', color: '#fc6d26' },
-  { name: 'Loom', initial: 'L', color: '#625df5' },
-  { name: 'LiveChat', initial: 'LC', color: '#0db9f0' },
-  { name: 'monday', initial: 'M', color: '#ff3d57' },
-  { name: 'Notion', initial: 'N', color: '#fff' },
-]
-
+// Icons and social links remain unchanged
 function IconX() {
   return <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.26 5.636zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
 }
@@ -56,26 +31,29 @@ const socialLinks = [
   { label: 'YouTube', icon: <IconYouTube />, href: '#', color: '#ff0000' },
 ]
 
+const features = [
+  { icon: '📡', title: 'حصص مباشرة', desc: 'شارك في دروس مباشرة تفاعلية مع خبراء الصناعة' },
+  { icon: '📝', title: 'اختبارات تفاعلية', desc: 'اختبر معرفتك وتتبع تقدمك بالاختبارات الذكية' },
+  { icon: '👥', title: 'مراجعة الأقران', desc: 'احصل على تغذية راجعة بنّاءة من زملائك' },
+  { icon: '🤖', title: 'مساعد الذكاء الاصطناعي', desc: 'احصل على إجابات فورية ومخصصة بمساعد الذكاء الاصطناعي' },
+]
+
 export default function Landing() {
   const { navigate } = useNav()
-  const [activeCategory, setActiveCategory] = useState('الكل')
+  const catalog = useCourseCatalog()
 
-  const heroRef    = useRef<HTMLDivElement>(null)
+  const heroRef = useRef<HTMLDivElement>(null)
   const coursesRef = useRef<HTMLDivElement>(null)
-  const aboutRef   = useRef<HTMLDivElement>(null)
+  const aboutRef = useRef<HTMLDivElement>(null)
   const contactRef = useRef<HTMLDivElement>(null)
 
   const scrollTo = (ref: React.RefObject<HTMLDivElement | null>) =>
     ref.current?.scrollIntoView({ behavior: 'smooth' })
 
-  const filteredCourses = activeCategory === 'الكل'
-    ? allCourses.slice(0, 6)
-    : allCourses.filter(c => c.category === activeCategory)
-
   const navItems = [
-    { label: 'الرئيسية',    ref: heroRef },
-    { label: 'من نحن',      ref: aboutRef },
-    { label: 'الكورسات',   ref: coursesRef },
+    { label: 'الرئيسية', ref: heroRef },
+    { label: 'من نحن', ref: aboutRef },
+    { label: 'الكورسات', ref: coursesRef },
     { label: 'تواصل معنا', ref: contactRef },
   ]
 
@@ -88,25 +66,13 @@ export default function Landing() {
         <div style={{ position: 'absolute', bottom: '10%', left: '-10%', width: 500, height: 500, borderRadius: '50%', background: 'radial-gradient(circle, rgba(168,85,247,0.12) 0%, transparent 70%)' }} />
       </div>
 
-
-    {/* ── Navbar ── */}
-    <nav style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(6,2,22,0.95)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 32px', height: 64, display: 'flex', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0, marginLeft: 'auto', cursor: 'pointer', height: '40px' }} onClick={() => scrollTo(heroRef)}>
-         <EdujarLogo width={140} height={38} />
-        </div>
-
-
-
-
       {/* ── Navbar ── */}
-      {/* <nav style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(6,2,22,0.95)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+      <nav style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(6,2,22,0.95)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 32px', height: 64, display: 'flex', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0, marginLeft: 'auto', cursor: 'pointer' }} onClick={() => scrollTo(heroRef)}>
-            <EdujarLogo width={130} height={35} />
-          </div> */}
-
-          <div style={{ display: 'flex', gap: 2, flex: 1, justifyContent: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0, marginLeft: 'auto', cursor: 'pointer', height: '40px' }} onClick={() => scrollTo(heroRef)}>
+            <EdujarLogo width={140} height={38} />
+          </div>
+          <div className="landing-navbar-links">
             {navItems.map(item => (
               <button key={item.label} onClick={() => scrollTo(item.ref)}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '6px 15px', borderRadius: 8, fontSize: 14.5, color: 'rgba(255,255,255,0.72)', fontFamily: 'inherit', transition: 'color 0.15s' }}
@@ -132,11 +98,11 @@ export default function Landing() {
 
       {/* ── Hero ── */}
       <section ref={heroRef} style={{ position: 'relative', zIndex: 1, maxWidth: 1200, margin: '0 auto', padding: '70px 32px 60px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 48 }}>
+        <div className="landing-hero-row">
           <div style={{ flex: 1 }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 9999, padding: '5px 14px', marginBottom: 28 }}>
               <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#a855f7', display: 'inline-block' }} />
-              <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)' }}>موثوق من أكثر من 50,000 متعلم</span>
+              <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)' }}>منصّتك التعليمية المتكاملة</span>
             </div>
             <h1 style={{ fontSize: 52, fontWeight: 900, lineHeight: 1.18, margin: '0 0 18px', letterSpacing: '-1px' }}>
               <span style={{ color: '#c4b5fd' }}>أفضل الكورسات</span><br />
@@ -152,17 +118,9 @@ export default function Landing() {
               <input style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', padding: '13px 4px', fontSize: 14, color: '#111', fontFamily: 'inherit', direction: 'rtl' }} placeholder="ماذا تريد أن تتعلم؟" />
               <button onClick={() => scrollTo(coursesRef)} style={{ background: 'linear-gradient(135deg, #7c3aed, #9333ea)', border: 'none', borderRadius: 9999, margin: 5, padding: '10px 22px', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>استكشف</button>
             </div>
-            <div style={{ display: 'flex', gap: 32, marginTop: 36 }}>
-              {[['50K+', 'طالب'], ['200+', 'كورس'], ['98%', 'معدل النجاح']].map(([num, label]) => (
-                <div key={label}>
-                  <div style={{ fontSize: 26, fontWeight: 900, color: '#fff', letterSpacing: '-0.5px' }}>{num}</div>
-                  <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>{label}</div>
-                </div>
-              ))}
-            </div>
           </div>
 
-          <div style={{ flex: '0 0 420px', position: 'relative', height: 420 }}>
+          <div className="landing-hero-visual">
             <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 380, height: 380, borderRadius: '50%', border: '1.5px dashed rgba(168,85,247,0.35)' }} />
             <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 300, height: 300, borderRadius: '50%', border: '1.5px dashed rgba(168,85,247,0.2)' }} />
             <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 240, height: 240, borderRadius: '50%', background: 'radial-gradient(circle at 40% 35%, #5b21b6 0%, #3b0764 60%, #1e0440 100%)', boxShadow: '0 0 60px rgba(124,58,237,0.5), 0 0 120px rgba(124,58,237,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -188,25 +146,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── Partners ── */}
-      <section style={{ position: 'relative', zIndex: 1, padding: '0 32px 60px' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-          <p style={{ textAlign: 'center', fontSize: 12, color: 'rgba(255,255,255,0.3)', letterSpacing: '3px', marginBottom: 24 }}>شركاؤنا الموثوقون</p>
-          <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
-            {partners.map(p => (
-              <div key={p.name} style={{ display: 'flex', alignItems: 'center', gap: 9, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 12, padding: '10px 20px', transition: 'all 0.2s', cursor: 'default' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(124,58,237,0.1)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(124,58,237,0.3)' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.09)' }}
-              >
-                <div style={{ width: 26, height: 26, borderRadius: 7, background: `${p.color}20`, border: `1px solid ${p.color}44`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: p.color, flexShrink: 0 }}>{p.initial}</div>
-                <span style={{ fontSize: 14, fontWeight: 700, color: 'rgba(255,255,255,0.55)' }}>{p.name}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Courses with filter ── */}
+      {/* ── Real Course Catalog ── */}
       <section ref={coursesRef} style={{ position: 'relative', zIndex: 1, maxWidth: 1200, margin: '0 auto', padding: '20px 32px 80px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
           <div>
@@ -215,69 +155,61 @@ export default function Landing() {
             </h2>
             <p style={{ color: 'rgba(255,255,255,0.5)', margin: '8px 0 0', fontSize: 14 }}>اختر من مئات الكورسات المتاحة</p>
           </div>
+          {catalog.hasActiveFilters && (
+            <button className="btn-outline" style={{ padding: '8px 18px', fontSize: 13.5 }} onClick={catalog.clearFilters}>
+              مسح الفلاتر
+            </button>
+          )}
         </div>
 
-        {/* Filter tabs */}
-        <div style={{ display: 'flex', gap: 8, marginBottom: 30, flexWrap: 'wrap' }}>
-          {categories.map(cat => (
-            <button key={cat} onClick={() => setActiveCategory(cat)}
-              style={{
-                padding: '8px 18px', borderRadius: 9999, fontSize: 13.5, fontWeight: 600,
-                border: `1px solid ${activeCategory === cat ? 'transparent' : 'rgba(255,255,255,0.12)'}`,
-                cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.18s',
-                background: activeCategory === cat ? 'linear-gradient(135deg, #7c3aed, #a855f7)' : 'rgba(255,255,255,0.05)',
-                color: '#fff',
-                boxShadow: activeCategory === cat ? '0 4px 14px rgba(124,58,237,0.35)' : 'none',
-              }}
-            >{cat} {activeCategory === cat && cat !== 'الكل' && <span style={{ opacity: 0.7, fontSize: 12 }}>({allCourses.filter(c => c.category === cat).length})</span>}</button>
-          ))}
-        </div>
+        <CourseFilterBar
+          search={catalog.search}
+          onSearchChange={catalog.setSearch}
+          category={catalog.category}
+          onCategoryChange={catalog.setCategory}
+          courseType={catalog.courseType}
+          onCourseTypeChange={catalog.setCourseType}
+          sortBy={catalog.sortBy}
+          onSortByChange={catalog.setSortBy}
+        />
 
-        {filteredCourses.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '60px 20px', color: 'rgba(255,255,255,0.4)', fontSize: 15 }}>
-            لا توجد كورسات في هذا التصنيف حالياً
+        {catalog.loading ? (
+          <SkeletonLoader type="card" count={6} />
+        ) : catalog.courses.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '60px 20px', color: 'rgba(255,255,255,0.35)' }}>
+            <div style={{ fontSize: 48, marginBottom: 14 }}>🔍</div>
+            <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6 }}>لم يتم العثور على كورسات</div>
+            <div style={{ fontSize: 13.5, marginBottom: 16 }}>حاول تغيير كلمة البحث أو الفلاتر</div>
+            {catalog.hasActiveFilters && (
+              <button className="btn-primary" style={{ padding: '9px 22px' }} onClick={catalog.clearFilters}>مسح الفلاتر</button>
+            )}
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 24 }}>
-            {filteredCourses.map(c => (
-              <div key={c.id} className="course-card">
-                <img src={c.img} alt={c.title} style={{ width: '100%', height: 180, objectFit: 'cover' }} />
-                <div style={{ padding: 18 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
-                    <span className="badge badge-primary">{c.category}</span>
-                    <span className="badge badge-neutral">{c.level}</span>
-                  </div>
-                  <h3 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 12px', lineHeight: 1.4 }}>{c.title}</h3>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--bg-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: '#c4b5fd', border: '1px solid rgba(255,255,255,0.1)' }}>م</div>
-                      <div>
-                        <div style={{ fontSize: 12, fontWeight: 600 }}>{c.instructor}</div>
-                        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>{c.students} طالب</div>
-                      </div>
-                    </div>
-                    <div className="stars">{'★'.repeat(c.rating)}{'☆'.repeat(5 - c.rating)}</div>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.07)' }}>
-                    <span style={{ fontSize: 16, fontWeight: 800, color: '#a855f7' }}>{c.price}</span>
-                    <button className="btn-primary" style={{ padding: '8px 18px', fontSize: 13 }} onClick={() => navigate('login')}>سجّل الآن</button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+          <>
+            <div className="grid-3">
+              {catalog.courses.map(c => (
+                <CourseCard key={c._id} course={c} onClick={() => navigate('course-catalog')} />
+              ))}
+            </div>
 
-        <div style={{ textAlign: 'center', marginTop: 40 }}>
-          <button className="btn-outline" style={{ padding: '12px 36px' }} onClick={() => navigate('login')}>
-            استعراض جميع الكورسات ←
-          </button>
-        </div>
+            {!catalog.loading && catalog.totalPages > 1 && (
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10, marginTop: 28 }}>
+                <button className="btn-outline" style={{ padding: '8px 18px', fontSize: 13.5 }} disabled={catalog.page === 1} onClick={() => catalog.setPage(p => Math.max(1, p - 1))}>
+                  السابق
+                </button>
+                <span style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.55)' }}>صفحة {catalog.page} من {catalog.totalPages}</span>
+                <button className="btn-outline" style={{ padding: '8px 18px', fontSize: 13.5 }} disabled={catalog.page === catalog.totalPages} onClick={() => catalog.setPage(p => Math.min(catalog.totalPages, p + 1))}>
+                  التالي
+                </button>
+              </div>
+            )}
+          </>
+        )}
       </section>
 
       {/* ── About ── */}
       <section ref={aboutRef} style={{ position: 'relative', zIndex: 1, background: 'rgba(124,58,237,0.05)', borderTop: '1px solid rgba(255,255,255,0.06)', borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '80px 32px' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 60, alignItems: 'center' }}>
+        <div className="landing-2col" style={{ maxWidth: 1200, margin: '0 auto' }}>
           <div>
             <div style={{ display: 'inline-block', background: 'rgba(124,58,237,0.15)', border: '1px solid rgba(124,58,237,0.3)', borderRadius: 9999, padding: '4px 14px', marginBottom: 20, fontSize: 13, color: '#c4b5fd' }}>من نحن</div>
             <h2 style={{ fontSize: 34, fontWeight: 800, margin: '0 0 18px', lineHeight: 1.25 }}>
@@ -285,7 +217,7 @@ export default function Landing() {
               <span className="gradient-text">بشغف حقيقي</span>
             </h2>
             <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 15.5, lineHeight: 1.8, margin: '0 0 22px' }}>
-              Edujar منصة تعليمية عربية متكاملة تهدف إلى تمكين المتعلمين العرب من الوصول إلى محتوى تعليمي عالي الجودة، بأسعار في متناول الجميع وبأساليب تفاعلية مبتكرة.
+              Hybrid LMS منصة تعليمية عربية متكاملة تهدف إلى تمكين المتعلمين العرب من الوصول إلى محتوى تعليمي عالي الجودة، بأسعار في متناول الجميع وبأساليب تفاعلية مبتكرة.
             </p>
             <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14.5, lineHeight: 1.8, margin: '0 0 30px' }}>
               نؤمن بأن التعليم حق للجميع. لذلك نعمل مع نخبة من أفضل المدرسين والخبراء لتقديم محتوى يلبّي احتياجات سوق العمل الحديث.
@@ -319,10 +251,10 @@ export default function Landing() {
       {/* ── Features ── */}
       <section style={{ position: 'relative', zIndex: 1, maxWidth: 1200, margin: '0 auto', padding: '80px 32px' }}>
         <div style={{ textAlign: 'center', marginBottom: 52 }}>
-          <h2 style={{ fontSize: 32, fontWeight: 800, margin: '0 0 10px' }}>لماذا <span className="gradient-text">Edujar؟</span></h2>
+          <h2 style={{ fontSize: 32, fontWeight: 800, margin: '0 0 10px' }}>لماذا <span className="gradient-text">Hybrid LMS؟</span></h2>
           <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 15 }}>كل ما تحتاجه لتجربة تعليمية استثنائية</p>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 20 }}>
+        <div className="grid-4">
           {features.map(f => (
             <div key={f.title} style={{ background: 'rgba(30,12,80,0.6)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 18, padding: '28px 20px', textAlign: 'center', transition: 'transform 0.2s, border-color 0.2s', cursor: 'default' }}
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-4px)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(124,58,237,0.4)' }}
@@ -338,7 +270,7 @@ export default function Landing() {
 
       {/* ── CTA ── */}
       <section style={{ position: 'relative', zIndex: 1, maxWidth: 1200, margin: '0 auto', padding: '80px 32px' }}>
-        <div style={{ background: 'linear-gradient(135deg, rgba(124,58,237,0.3) 0%, rgba(168,85,247,0.2) 100%)', border: '1px solid rgba(124,58,237,0.35)', borderRadius: 24, padding: '52px 60px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ background: 'linear-gradient(135deg, rgba(124,58,237,0.3) 0%, rgba(168,85,247,0.2) 100%)', border: '1px solid rgba(124,58,237,0.35)', borderRadius: 24, padding: '52px 24px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', top: -60, right: -60, width: 200, height: 200, borderRadius: '50%', background: 'rgba(124,58,237,0.2)', filter: 'blur(60px)' }} />
           <div style={{ position: 'absolute', bottom: -40, left: -40, width: 160, height: 160, borderRadius: '50%', background: 'rgba(168,85,247,0.2)', filter: 'blur(50px)' }} />
           <h2 style={{ fontSize: 36, fontWeight: 800, margin: '0 0 14px', position: 'relative' }}>ابدأ رحلتك التعليمية <span className="gradient-text">اليوم</span></h2>
@@ -358,10 +290,10 @@ export default function Landing() {
             <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 15 }}>فريقنا جاهز للرد على استفساراتك</p>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 28 }}>
+          <div className="landing-contact-grid">
             {/* Form */}
             <div style={{ background: 'rgba(20,8,60,0.7)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: '30px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+              <div className="landing-contact-form-row" style={{ marginBottom: 14 }}>
                 <div>
                   <label className="form-label">الاسم</label>
                   <input className="form-input" placeholder="محمد أحمد" />
@@ -382,7 +314,7 @@ export default function Landing() {
               <button className="btn-primary" style={{ width: '100%', padding: '13px', fontSize: 15 }}>إرسال الرسالة ✉️</button>
             </div>
 
-            {/* Contact info — simplified */}
+            {/* Contact info */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {[
                 { icon: '📞', label: 'اتصل بنا', value: '+963 11 234 5678' },
@@ -416,12 +348,10 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── Footer — simplified ── */}
+      {/* ── Footer ── */}
       <footer style={{ borderTop: '1px solid rgba(255,255,255,0.08)', padding: '40px 32px 28px', position: 'relative', zIndex: 1 }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-          {/* Main footer row */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 28, marginBottom: 28 }}>
-            {/* Contact info */}
             <div style={{ display: 'flex', gap: 28, flexWrap: 'wrap' }}>
               {[['📞', '+963 11 234 5678'], ['📧', 'support@edujar.com'], ['📍', 'دمشق، سوريا']].map(([icon, val]) => (
                 <div key={val} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -431,7 +361,6 @@ export default function Landing() {
               ))}
             </div>
 
-            {/* Social icons */}
             <div style={{ display: 'flex', gap: 9 }}>
               {socialLinks.map(s => (
                 <a key={s.label} href={s.href} title={s.label}
@@ -443,10 +372,8 @@ export default function Landing() {
             </div>
           </div>
 
-          {/* Bottom bar */}
           <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 20 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-              {/* Privacy + copyright stacked on the left */}
               <div>
                 <div style={{ display: 'flex', gap: 16, marginBottom: 5 }}>
                   {['سياسة الخصوصية', 'شروط الخدمة', 'ملفات الارتباط'].map(l => (
@@ -456,7 +383,7 @@ export default function Landing() {
                     >{l}</button>
                   ))}
                 </div>
-                <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 12.5, margin: 0 }}>© 2026 Edujar. جميع الحقوق محفوظة.</p>
+                <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 12.5, margin: 0 }}>© 2026 Hybrid LMS. جميع الحقوق محفوظة.</p>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <EdujarLogo width={80} height={22} />

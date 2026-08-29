@@ -6,8 +6,6 @@ const StudentNav = [
   { icon: '📚', label: 'كورساتي', page: 'my-courses' },
   { icon: '🔍', label: 'استعراض الكورسات', page: 'course-catalog' },
   { icon: '📡', label: 'الحصص المباشرة', page: 'live-class' },
-  { icon: '📝', label: 'الواجبات', page: 'assignments' },
-  { icon: '📊', label: 'الاختبارات', page: 'exams' },
   { icon: '🏆', label: 'الشهادات', page: 'certificates' },
   { icon: '🤖', label: 'المساعد الذكي', page: 'ai-assistant' },
   { icon: '⚙️', label: 'الإعدادات', page: 'profile' },
@@ -16,11 +14,6 @@ const StudentNav = [
 const InstructorNav = [
   { icon: '⊞', label: 'لوحة التحكم', page: 'instructor-dashboard' },
   { icon: '🏗️', label: 'إنشاء كورس', page: 'course-builder' },
-  { icon: '✅', label: 'رمز الحضور', page: 'attendance-manager' },
-  { icon: '📝', label: 'التقييمات', page: 'grading-manager' },
-  { icon: '📡', label: 'البث المباشر', page: 'live-controller' },
-  { icon: '🧠', label: 'اختبار جديد', page: 'quiz-creator' },
-  { icon: '📈', label: 'التقارير', page: 'instructor-analytics' },
   { icon: '⚙️', label: 'الإعدادات', page: 'profile' },
 ] as const
 
@@ -30,9 +23,12 @@ const InstructorSetupNav = [
   { icon: '⚙️', label: 'الإعدادات', page: 'profile' },
 ] as const
 
-// قائمة الأدمن — KYC صار تبويب داخل AdminDashboard نفسها، مو رابط منفصل هون
+// قائمة الأدمن — KYC ومراجعة الكورسات صاروا تبويبات داخل AdminDashboard نفسها
+// (وليسوا صفحات/Routes منفصلة)، فما بنحطهم كروابط Sidebar مستقلة
 const AdminNav = [
   { icon: '⊞', label: 'لوحة التحكم', page: 'admin-dashboard' },
+  { icon: '💳', label: 'المدفوعات', page: 'admin-payments' },
+  { icon: '↩️', label: 'طلبات الاسترداد', page: 'refunds' },
   { icon: '⚙️', label: 'الإعدادات', page: 'profile' },
 ] as const
 
@@ -64,16 +60,8 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
       )}
 
       <aside
-        style={{
-          position: 'fixed', top: 0, right: 0, width: 'var(--sidebar-width)', height: '100vh',
-          background: 'rgba(12,4,45,0.96)', backdropFilter: 'blur(30px)',
-          borderLeft: '1px solid rgba(255,255,255,0.08)', zIndex: 100,
-          display: 'flex', flexDirection: 'column',
-          transition: 'transform 0.3s cubic-bezier(0.4,0,0.2,1)',
-          transform: mobileOpen ? 'translateX(0)' : undefined,
-        }}
-        className="max-[900px]:translate-x-full max-[900px]:hidden"
-      >
+
+        className={`sidebar-panel${mobileOpen ? ' mobile-open' : ''}`}      >
         <div style={{ padding: '18px 18px 14px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
           <EdujarLogo width={130} height={34} />
         </div>

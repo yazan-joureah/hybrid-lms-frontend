@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, type ChangeEvent } from 'react'
 import { useNav } from '../../context/NavContext'
 import { useAuthApi } from '../../context/AuthApiContext'
+import { StudentPaymentsPanel } from '../payments/student/StudentPaymentsPanel'
 
 type BackendRole = 'Student' | 'Instructor' | 'Admin' | 'Superadmin'
 
@@ -18,7 +19,14 @@ export default function Profile() {
   const { userName, setUserName, userEmail, setUserEmail, userPhone, setUserPhone, userDob, setUserDob, userBio, setUserBio, userGender, setUserGender } = useNav()
   const { getCurrentUser, setupMfa, confirmMfa, getErrorMessage, uploadProfilePicture, getProfilePictureUrl, submitKyc } = useAuthApi()
 
-  const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'verification' | 'billing'>('profile')
+  const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'verification' | 'billing'>(
+    () => (sessionStorage.getItem('profile_initial_tab') as any) || 'profile'
+  )
+
+  useEffect(() => {
+    if (sessionStorage.getItem('profile_initial_tab')) sessionStorage.removeItem('profile_initial_tab')
+  }, [])
+
   const [name, setName] = useState(userName || 'أحمد محمد الأحمد')
   const [email, setEmail] = useState(userEmail || '')
   const [phone, setPhone] = useState(userPhone || '')
@@ -200,12 +208,6 @@ export default function Profile() {
     }
   }
 
-  const billingHistory = [
-    { id: 1, course: 'React المتقدم', date: '2026-07-10', amount: '349 ر.س', status: 'مدفوع' },
-    { id: 2, course: 'Python للتحليل المالي', date: '2026-06-20', amount: '299 ر.س', status: 'مدفوع' },
-    { id: 3, course: 'Figma UI/UX', date: '2026-05-05', amount: '199 ر.س', status: 'مدفوع' },
-  ]
-
   const statCards: [string, string][] = isStudent
     ? [['📚', '3 كورسات نشطة'], ['🏆', '2 شهادة'], ['⏱️', '45 ساعة تعلم'], ['📊', '87% حضور']]
     : isInstructor
@@ -231,7 +233,7 @@ export default function Profile() {
         <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14, margin: '4px 0 0' }}>إدارة بياناتك وإعدادات الأمان</p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: 22 }}>
+      <div className="profile-grid">
         {/* Left panel */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div style={{ background: 'var(--bg-card)', backdropFilter: 'blur(20px)', border: '1px solid var(--border)', borderRadius: 18, padding: '24px', textAlign: 'center' }}>
@@ -280,7 +282,7 @@ export default function Profile() {
           {activeTab === 'profile' && (
             <div style={{ background: 'var(--bg-card)', backdropFilter: 'blur(20px)', border: '1px solid var(--border)', borderRadius: 18, padding: '28px' }}>
               <h3 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 22px' }}>المعلومات الشخصية</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 18 }}>
+              <div className="profile-fields-grid">
                 <div>
                   <label className="form-label">الاسم الكامل</label>
                   <input className="form-input" value={name} onChange={e => setName(e.target.value)} />
@@ -444,20 +446,9 @@ export default function Profile() {
               <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
                 <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>💳 سجل المدفوعات</h3>
               </div>
-              <table className="data-table">
-                <thead><tr><th>الكورس</th><th>التاريخ</th><th>المبلغ</th><th>الحالة</th><th>فاتورة</th></tr></thead>
-                <tbody>
-                  {billingHistory.map(b => (
-                    <tr key={b.id}>
-                      <td style={{ fontWeight: 500 }}>{b.course}</td>
-                      <td style={{ color: 'rgba(255,255,255,0.55)' }}>{b.date}</td>
-                      <td style={{ fontWeight: 700, color: '#a855f7' }}>{b.amount}</td>
-                      <td><span className="badge badge-success">{b.status}</span></td>
-                      <td><button style={{ background: 'none', border: 'none', color: '#a855f7', fontSize: 12.5, cursor: 'pointer', fontFamily: 'inherit' }}>تحميل ⬇</button></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div style={{ padding: '20px 24px' }}>
+                <StudentPaymentsPanel />
+              </div>
             </div>
           )}
         </div>
