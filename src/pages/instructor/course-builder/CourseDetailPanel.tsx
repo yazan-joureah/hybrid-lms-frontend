@@ -5,12 +5,15 @@ import { UnitsTab } from './UnitsTab'
 import { QuizzesTab } from './QuizzesTab'
 import { StudentsTab } from './StudentsTab'
 import { PeerTab } from './PeerTab'
+import { LiveTab } from './LiveTab'
+import { AttendanceTab } from './AttendanceTab'
 import { useCourseDetail } from '../../../hooks/course/useCourseDetail'
 import { useCourseUnits } from '../../../hooks/course/useCourseUnits'
 import { useInstructorQuizzes } from '../../../hooks/quiz/useInstructorQuizzes'
 import { useCourseStudents } from '../../../hooks/course/useCourseStudents'
 import { useInstructorPeerAssignments } from '../../../hooks/peer/useInstructorPeerAssignments'
-
+import { useInstructorLiveSessions } from '../../../hooks/live/useInstructorLiveSessions'
+import { useAttendance } from '../../../hooks/live/useAttendance'
 
 interface Props {
     courseId: string
@@ -18,7 +21,7 @@ interface Props {
     onDeleted: () => void
 }
 
-type TabKey = 'details' | 'units' | 'quizzes' | 'peer' | 'students'
+type TabKey = 'details' | 'units' | 'quizzes' | 'peer' | 'students' | 'live' | 'attendance'
 
 export function CourseDetailPanel({ courseId, onChanged, onDeleted }: Props) {
     const [activeTab, setActiveTab] = useState<TabKey>('details')
@@ -28,6 +31,9 @@ export function CourseDetailPanel({ courseId, onChanged, onDeleted }: Props) {
     const quizzesState = useInstructorQuizzes(courseId)
     const studentsState = useCourseStudents(courseId)
     const peerState = useInstructorPeerAssignments(courseId)
+    const liveState = useInstructorLiveSessions(courseId)
+    const attendanceState = useAttendance(courseId)
+    const isSynchronous = Boolean(courseDetail.detail?.is_synchronous)
 
     return (
         <div style={{ background: 'var(--bg-card)', backdropFilter: 'blur(20px)', border: '1px solid var(--border)', borderRadius: 18, overflow: 'hidden' }}>
@@ -44,7 +50,16 @@ export function CourseDetailPanel({ courseId, onChanged, onDeleted }: Props) {
                 <div className={`tab-item${activeTab === 'students' ? ' active' : ''}`} onClick={() => setActiveTab('students')}>
                     الطلاب ({studentsState.students.length})
                 </div>
-
+                {isSynchronous && (
+                    <div className={`tab-item${activeTab === 'live' ? ' active' : ''}`} onClick={() => setActiveTab('live')}>
+                        الحصص المباشرة ({liveState.sessions.length})
+                    </div>
+                )}
+                {isSynchronous && (
+                    <div className={`tab-item${activeTab === 'attendance' ? ' active' : ''}`} onClick={() => setActiveTab('attendance')}>
+                        الحضور
+                    </div>
+                )}
             </div>
 
             <div style={{ padding: 24 }}>
@@ -63,6 +78,8 @@ export function CourseDetailPanel({ courseId, onChanged, onDeleted }: Props) {
                 )}
                 {activeTab === 'peer' && <PeerTab {...peerState} units={unitsState.units} />}
                 {activeTab === 'students' && <StudentsTab {...studentsState} />}
+                {activeTab === 'live' && <LiveTab {...liveState} units={unitsState.units} />}
+                {activeTab === 'attendance' && <AttendanceTab {...attendanceState} sessions={liveState.sessions} />}
             </div>
         </div>
     )

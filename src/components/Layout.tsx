@@ -14,13 +14,7 @@ export default function Layout({ children }: LayoutProps) {
       <Sidebar mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
 
       {/* Main area */}
-      <div style={{
-        flex: 1,
-        marginRight: 'var(--sidebar-width)',
-        minHeight: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-      }} className="max-[900px]:mr-0">
+      <div className="app-shell-main">
         <Header onMenuClick={() => setMobileOpen(true)} />
         <main style={{ flex: 1 }}>
           {children}

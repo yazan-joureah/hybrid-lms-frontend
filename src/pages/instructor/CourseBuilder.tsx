@@ -22,7 +22,7 @@ export default function CourseBuilder() {
 
   return (
     <div className="page-wrapper">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 14 }}>
         <div>
           <h2 className="section-title">بناء الكورس</h2>
           <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14, margin: '4px 0 0' }}>أنشئ وعدّل كورساتك ومحتواها</p>

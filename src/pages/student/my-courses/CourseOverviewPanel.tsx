@@ -1,9 +1,12 @@
 // src/pages/student/my-courses/CourseOverviewPanel.tsx
+import { useMemo } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import type { Enrollment } from '../../../services/courseService'
-import { useCoursePlayer, type PlayerBlockedReason } from '../../../hooks/course/useCoursePlayer'
+import { useCoursePlayer, type PlayerBlockedReason, type StoredSelection } from '../../../hooks/course/useCoursePlayer'
 import { PlayerSidebar } from './player/PlayerSidebar'
 import { ContentViewer } from './player/ContentViewer'
 import { QuizPlayer } from '../../../components/quiz/QuizPlayer'
+import { LiveSessionPanel } from './player/LiveSessionPanel'
 import { PeerAssignmentView } from '../../../components/peer/student/PeerAssignmentView'
 import { SkeletonLoader } from '../../../components/common/Loading'
 
@@ -32,8 +35,39 @@ const BLOCKED_META: Record<PlayerBlockedReason, { icon: string; title: string; m
 
 export function CourseOverviewPanel({ enrollment, onBack }: Props) {
     const courseId = enrollment.course_id?._id
-    const player = useCoursePlayer(courseId)
+    const [searchParams, setSearchParams] = useSearchParams()
 
+    // ✅ أدابتر يخزّن اختيار المحتوى الحالي بـ query params على نفس رابط
+    // /my-courses/:enrollmentId — فيصير الرابط قابل للمشاركة ويصمد أمام F5،
+    // بدل الاعتماد على sessionStorage الذي يضيع بين التبويبات/الأجهزة.
+    const selectionStorage = useMemo(() => ({
+        get: (): StoredSelection | null => {
+            const kind = searchParams.get('kind')
+            const itemId = searchParams.get('itemId')
+            if (!kind || !itemId) return null
+            if (kind === 'content') {
+                const unitId = searchParams.get('unitId')
+                if (!unitId) return null
+                return { kind: 'content', id: itemId, unitId }
+            }
+            if (kind === 'quiz' || kind === 'peer' || kind === 'session') {
+                return { kind, id: itemId } as StoredSelection
+            }
+            return null
+        },
+        set: (sel: StoredSelection) => {
+            setSearchParams(prev => {
+                const next = new URLSearchParams(prev)
+                next.set('kind', sel.kind)
+                next.set('itemId', sel.id)
+                if (sel.kind === 'content') next.set('unitId', sel.unitId)
+                else next.delete('unitId')
+                return next
+            }, { replace: true })
+        },
+    }), [searchParams, setSearchParams])
+
+    const player = useCoursePlayer(courseId, selectionStorage)
     return (
         <div>
             <button onClick={onBack} style={{ background: 'none', border: 'none', color: '#a855f7', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13.5, display: 'flex', alignItems: 'center', gap: 6, padding: 0, marginBottom: 20 }}>
@@ -55,7 +89,7 @@ export function CourseOverviewPanel({ enrollment, onBack }: Props) {
             ) : (
                 <>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
-                        <h2 style={{ fontSize: 19, fontWeight: 800, margin: 0 }}>{player.course?.title}</h2>
+                        <h2 style={{ fontSize: 19, fontWeight: 800, margin: 0, wordBreak: 'break-word' }}>{player.course?.title}</h2>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                             <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)' }}>التقدم:</span>
                             <span style={{ fontSize: 15, fontWeight: 700, color: '#a855f7' }}>{Math.round(player.progressPercentage * 100)}%</span>
@@ -65,20 +99,23 @@ export function CourseOverviewPanel({ enrollment, onBack }: Props) {
                         <div className="progress-fill" style={{ width: `${player.progressPercentage * 100}%` }} />
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 20, alignItems: 'flex-start' }}>
+                    <div className="player-grid">
                         <PlayerSidebar
                             units={player.units}
                             quizzes={player.quizzes}
                             peerAssignments={player.peerAssignments}
+                            liveSessions={player.liveSessions}
                             expandedUnitIds={player.expandedUnitIds}
                             loadingUnitIds={player.loadingUnitIds}
                             activeContentId={player.selection?.kind === 'content' ? player.selection.item._id : undefined}
                             activeQuizId={player.selection?.kind === 'quiz' ? player.selection.quiz._id : undefined}
                             activePeerId={player.selection?.kind === 'peer' ? player.selection.assignment._id : undefined}
+                            activeSessionId={player.selection?.kind === 'session' ? player.selection.session._id : undefined}
                             onToggleUnit={player.toggleUnit}
                             onSelectContent={player.selectContentItem}
                             onSelectQuiz={player.selectQuizItem}
                             onSelectPeer={player.selectPeerItem}
+                            onSelectSession={player.selectSessionItem}
                         />
 
                         {!player.selection ? (
@@ -95,6 +132,8 @@ export function CourseOverviewPanel({ enrollment, onBack }: Props) {
                             />
                         ) : player.selection.kind === 'quiz' ? (
                             <QuizPlayer key={player.selection.quiz._id} quiz={player.selection.quiz} onCompleted={player.refreshAfterQuiz} />
+                        ) : player.selection.kind === 'session' ? (
+                            <LiveSessionPanel key={player.selection.session._id} session={player.selection.session} onRefresh={player.refreshLiveSessions} />
                         ) : (
                             <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 18, padding: 26 }}>
                                 <PeerAssignmentView

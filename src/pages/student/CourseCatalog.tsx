@@ -51,7 +51,7 @@ export default function CourseCatalog() {
           )}
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 22 }}>
+        <div className="grid-3">
           {catalog.courses.map(c => (
             <CourseCard key={c._id} course={c} onClick={() => setPreviewId(c._id)} />
           ))}

@@ -3,14 +3,13 @@ import { createContext, useContext } from 'react'
 export type Role = 'student' | 'instructor' | 'admin' | 'superadmin'
 
 export type Page =
-  | 'landing' | 'login' | 'register' | 'forgot-password'
-  | 'student-dashboard' | 'course-catalog' | 'my-courses' | 'assignments'
-  | 'live-class' | 'exams' | 'certificates' | 'ai-assistant' | 'profile'
-  | 'instructor-dashboard' | 'instructor-setup' | 'course-builder' | 'attendance-manager'
-  | 'grading-manager' | 'live-controller' | 'quiz-creator' | 'instructor-analytics'
-  | 'admin-dashboard' | 'user-management' | 'kyc-review' | 'course-approval'
-  | 'refunds' | 'platform-analytics'
-  | 'security-dashboard' | 'audit-log' | 'rbac' | 'data-retention'
+  | 'landing' | 'login' | 'register' | 'forgot-password' | 'verify-certificate'
+  | 'student-dashboard' | 'course-catalog' | 'my-courses'
+  | 'live-class' | 'certificates' | 'ai-assistant' | 'profile'
+  | 'checkout' | 'payment-success' | 'payment-cancelled'
+  | 'admin-payments' | 'admin-payment-detail'
+  | 'instructor-dashboard' | 'instructor-setup' | 'course-builder'
+  | 'admin-dashboard' | 'refunds'
 
 interface NavContextType {
   page: Page
@@ -20,8 +19,6 @@ interface NavContextType {
   isAuthenticated: boolean
   login: (r: Role) => void
   logout: () => void
-  notifOpen: boolean
-  setNotifOpen: (v: boolean) => void
   userName: string
   setUserName: (n: string) => void
   userEmail: string
@@ -37,7 +34,7 @@ interface NavContextType {
   kycStatus: string
   mfaEnabled: boolean
   instructorSetupIncomplete: boolean
-  refreshUser: () => Promise<void>;
+  refreshUser: () => Promise<void>
 }
 
 export const NavContext = createContext<NavContextType>({
@@ -48,8 +45,6 @@ export const NavContext = createContext<NavContextType>({
   isAuthenticated: false,
   login: () => { },
   logout: () => { },
-  notifOpen: false,
-  setNotifOpen: () => { },
   userName: '',
   setUserName: () => { },
   userEmail: '',
@@ -66,7 +61,6 @@ export const NavContext = createContext<NavContextType>({
   mfaEnabled: false,
   instructorSetupIncomplete: false,
   refreshUser: async () => { },
-
 })
 
 export const useNav = () => useContext(NavContext)

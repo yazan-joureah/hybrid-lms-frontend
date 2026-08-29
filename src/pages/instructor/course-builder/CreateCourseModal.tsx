@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useState, useEffect, type FormEvent } from 'react'
 import { useToast } from '../../../context/ToastContext'
 import { ModalPortal } from '../../../components/common/ModalPortal'
 import { courseService, type CourseFormPayload } from '../../../services/courseService'
@@ -18,7 +18,12 @@ export function CreateCourseModal({ onClose, onCreated }: Props) {
     const [coverPreview, setCoverPreview] = useState<string | null>(null)
     const [creating, setCreating] = useState(false)
 
+    useEffect(() => {
+        return () => { if (coverPreview) URL.revokeObjectURL(coverPreview) }
+    }, [coverPreview])
+
     const handleCoverChange = (file: File | null) => {
+        if (coverPreview) URL.revokeObjectURL(coverPreview)
         setCoverFile(file)
         setCoverPreview(file ? URL.createObjectURL(file) : null)
     }

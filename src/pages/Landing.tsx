@@ -31,15 +31,6 @@ const socialLinks = [
   { label: 'YouTube', icon: <IconYouTube />, href: '#', color: '#ff0000' },
 ]
 
-const partners = [
-  { name: 'HubSpot', initial: 'H', color: '#f97316' },
-  { name: 'GitLab', initial: 'G', color: '#fc6d26' },
-  { name: 'Loom', initial: 'L', color: '#625df5' },
-  { name: 'LiveChat', initial: 'LC', color: '#0db9f0' },
-  { name: 'monday', initial: 'M', color: '#ff3d57' },
-  { name: 'Notion', initial: 'N', color: '#fff' },
-]
-
 const features = [
   { icon: '📡', title: 'حصص مباشرة', desc: 'شارك في دروس مباشرة تفاعلية مع خبراء الصناعة' },
   { icon: '📝', title: 'اختبارات تفاعلية', desc: 'اختبر معرفتك وتتبع تقدمك بالاختبارات الذكية' },
@@ -81,7 +72,7 @@ export default function Landing() {
           <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0, marginLeft: 'auto', cursor: 'pointer', height: '40px' }} onClick={() => scrollTo(heroRef)}>
             <EdujarLogo width={140} height={38} />
           </div>
-          <div style={{ display: 'flex', gap: 2, flex: 1, justifyContent: 'center' }}>
+          <div className="landing-navbar-links">
             {navItems.map(item => (
               <button key={item.label} onClick={() => scrollTo(item.ref)}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '6px 15px', borderRadius: 8, fontSize: 14.5, color: 'rgba(255,255,255,0.72)', fontFamily: 'inherit', transition: 'color 0.15s' }}
@@ -107,11 +98,11 @@ export default function Landing() {
 
       {/* ── Hero ── */}
       <section ref={heroRef} style={{ position: 'relative', zIndex: 1, maxWidth: 1200, margin: '0 auto', padding: '70px 32px 60px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 48 }}>
+        <div className="landing-hero-row">
           <div style={{ flex: 1 }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 9999, padding: '5px 14px', marginBottom: 28 }}>
               <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#a855f7', display: 'inline-block' }} />
-              <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)' }}>موثوق من أكثر من 50,000 متعلم</span>
+              <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)' }}>منصّتك التعليمية المتكاملة</span>
             </div>
             <h1 style={{ fontSize: 52, fontWeight: 900, lineHeight: 1.18, margin: '0 0 18px', letterSpacing: '-1px' }}>
               <span style={{ color: '#c4b5fd' }}>أفضل الكورسات</span><br />
@@ -127,17 +118,9 @@ export default function Landing() {
               <input style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', padding: '13px 4px', fontSize: 14, color: '#111', fontFamily: 'inherit', direction: 'rtl' }} placeholder="ماذا تريد أن تتعلم؟" />
               <button onClick={() => scrollTo(coursesRef)} style={{ background: 'linear-gradient(135deg, #7c3aed, #9333ea)', border: 'none', borderRadius: 9999, margin: 5, padding: '10px 22px', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>استكشف</button>
             </div>
-            <div style={{ display: 'flex', gap: 32, marginTop: 36 }}>
-              {[['50K+', 'طالب'], ['200+', 'كورس'], ['98%', 'معدل النجاح']].map(([num, label]) => (
-                <div key={label}>
-                  <div style={{ fontSize: 26, fontWeight: 900, color: '#fff', letterSpacing: '-0.5px' }}>{num}</div>
-                  <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>{label}</div>
-                </div>
-              ))}
-            </div>
           </div>
 
-          <div style={{ flex: '0 0 420px', position: 'relative', height: 420 }}>
+          <div className="landing-hero-visual">
             <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 380, height: 380, borderRadius: '50%', border: '1.5px dashed rgba(168,85,247,0.35)' }} />
             <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 300, height: 300, borderRadius: '50%', border: '1.5px dashed rgba(168,85,247,0.2)' }} />
             <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 240, height: 240, borderRadius: '50%', background: 'radial-gradient(circle at 40% 35%, #5b21b6 0%, #3b0764 60%, #1e0440 100%)', boxShadow: '0 0 60px rgba(124,58,237,0.5), 0 0 120px rgba(124,58,237,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -159,24 +142,6 @@ export default function Landing() {
               <span style={{ fontSize: 13 }}>🎓</span>
               <span style={{ fontSize: 12.5, fontWeight: 700, color: '#fff' }}>معتمد رسمياً</span>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Partners ── */}
-      <section style={{ position: 'relative', zIndex: 1, padding: '0 32px 60px' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-          <p style={{ textAlign: 'center', fontSize: 12, color: 'rgba(255,255,255,0.3)', letterSpacing: '3px', marginBottom: 24 }}>شركاؤنا الموثوقون</p>
-          <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
-            {partners.map(p => (
-              <div key={p.name} style={{ display: 'flex', alignItems: 'center', gap: 9, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 12, padding: '10px 20px', transition: 'all 0.2s', cursor: 'default' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(124,58,237,0.1)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(124,58,237,0.3)' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.09)' }}
-              >
-                <div style={{ width: 26, height: 26, borderRadius: 7, background: `${p.color}20`, border: `1px solid ${p.color}44`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: p.color, flexShrink: 0 }}>{p.initial}</div>
-                <span style={{ fontSize: 14, fontWeight: 700, color: 'rgba(255,255,255,0.55)' }}>{p.name}</span>
-              </div>
-            ))}
           </div>
         </div>
       </section>
@@ -221,7 +186,7 @@ export default function Landing() {
           </div>
         ) : (
           <>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 24 }}>
+            <div className="grid-3">
               {catalog.courses.map(c => (
                 <CourseCard key={c._id} course={c} onClick={() => navigate('course-catalog')} />
               ))}
@@ -244,7 +209,7 @@ export default function Landing() {
 
       {/* ── About ── */}
       <section ref={aboutRef} style={{ position: 'relative', zIndex: 1, background: 'rgba(124,58,237,0.05)', borderTop: '1px solid rgba(255,255,255,0.06)', borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '80px 32px' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 60, alignItems: 'center' }}>
+        <div className="landing-2col" style={{ maxWidth: 1200, margin: '0 auto' }}>
           <div>
             <div style={{ display: 'inline-block', background: 'rgba(124,58,237,0.15)', border: '1px solid rgba(124,58,237,0.3)', borderRadius: 9999, padding: '4px 14px', marginBottom: 20, fontSize: 13, color: '#c4b5fd' }}>من نحن</div>
             <h2 style={{ fontSize: 34, fontWeight: 800, margin: '0 0 18px', lineHeight: 1.25 }}>
@@ -252,7 +217,7 @@ export default function Landing() {
               <span className="gradient-text">بشغف حقيقي</span>
             </h2>
             <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 15.5, lineHeight: 1.8, margin: '0 0 22px' }}>
-              Edujar منصة تعليمية عربية متكاملة تهدف إلى تمكين المتعلمين العرب من الوصول إلى محتوى تعليمي عالي الجودة، بأسعار في متناول الجميع وبأساليب تفاعلية مبتكرة.
+              Hybrid LMS منصة تعليمية عربية متكاملة تهدف إلى تمكين المتعلمين العرب من الوصول إلى محتوى تعليمي عالي الجودة، بأسعار في متناول الجميع وبأساليب تفاعلية مبتكرة.
             </p>
             <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14.5, lineHeight: 1.8, margin: '0 0 30px' }}>
               نؤمن بأن التعليم حق للجميع. لذلك نعمل مع نخبة من أفضل المدرسين والخبراء لتقديم محتوى يلبّي احتياجات سوق العمل الحديث.
@@ -286,10 +251,10 @@ export default function Landing() {
       {/* ── Features ── */}
       <section style={{ position: 'relative', zIndex: 1, maxWidth: 1200, margin: '0 auto', padding: '80px 32px' }}>
         <div style={{ textAlign: 'center', marginBottom: 52 }}>
-          <h2 style={{ fontSize: 32, fontWeight: 800, margin: '0 0 10px' }}>لماذا <span className="gradient-text">Edujar؟</span></h2>
+          <h2 style={{ fontSize: 32, fontWeight: 800, margin: '0 0 10px' }}>لماذا <span className="gradient-text">Hybrid LMS؟</span></h2>
           <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 15 }}>كل ما تحتاجه لتجربة تعليمية استثنائية</p>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 20 }}>
+        <div className="grid-4">
           {features.map(f => (
             <div key={f.title} style={{ background: 'rgba(30,12,80,0.6)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 18, padding: '28px 20px', textAlign: 'center', transition: 'transform 0.2s, border-color 0.2s', cursor: 'default' }}
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-4px)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(124,58,237,0.4)' }}
@@ -305,7 +270,7 @@ export default function Landing() {
 
       {/* ── CTA ── */}
       <section style={{ position: 'relative', zIndex: 1, maxWidth: 1200, margin: '0 auto', padding: '80px 32px' }}>
-        <div style={{ background: 'linear-gradient(135deg, rgba(124,58,237,0.3) 0%, rgba(168,85,247,0.2) 100%)', border: '1px solid rgba(124,58,237,0.35)', borderRadius: 24, padding: '52px 60px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ background: 'linear-gradient(135deg, rgba(124,58,237,0.3) 0%, rgba(168,85,247,0.2) 100%)', border: '1px solid rgba(124,58,237,0.35)', borderRadius: 24, padding: '52px 24px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', top: -60, right: -60, width: 200, height: 200, borderRadius: '50%', background: 'rgba(124,58,237,0.2)', filter: 'blur(60px)' }} />
           <div style={{ position: 'absolute', bottom: -40, left: -40, width: 160, height: 160, borderRadius: '50%', background: 'rgba(168,85,247,0.2)', filter: 'blur(50px)' }} />
           <h2 style={{ fontSize: 36, fontWeight: 800, margin: '0 0 14px', position: 'relative' }}>ابدأ رحلتك التعليمية <span className="gradient-text">اليوم</span></h2>
@@ -325,10 +290,10 @@ export default function Landing() {
             <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 15 }}>فريقنا جاهز للرد على استفساراتك</p>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 28 }}>
+          <div className="landing-contact-grid">
             {/* Form */}
             <div style={{ background: 'rgba(20,8,60,0.7)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: '30px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+              <div className="landing-contact-form-row" style={{ marginBottom: 14 }}>
                 <div>
                   <label className="form-label">الاسم</label>
                   <input className="form-input" placeholder="محمد أحمد" />
@@ -418,7 +383,7 @@ export default function Landing() {
                     >{l}</button>
                   ))}
                 </div>
-                <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 12.5, margin: 0 }}>© 2026 Edujar. جميع الحقوق محفوظة.</p>
+                <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 12.5, margin: 0 }}>© 2026 Hybrid LMS. جميع الحقوق محفوظة.</p>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <EdujarLogo width={80} height={22} />

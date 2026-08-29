@@ -35,7 +35,7 @@ export function ContentViewer({ item, blobUrl, loading, marking, onMarkComplete 
                 loading ? (
                     <div style={{ textAlign: 'center', padding: '60px 0', color: 'rgba(255,255,255,0.4)' }}>جارٍ تحميل الفيديو...</div>
                 ) : blobUrl ? (
-                    <video controls src={blobUrl} style={{ width: '100%', maxHeight: 460, borderRadius: 12, background: '#000' }} />
+                    <video controls src={blobUrl} style={{ width: '100%', maxHeight: '60vh', borderRadius: 12, background: '#000' }} />
                 ) : null
             )}
 
@@ -44,7 +44,7 @@ export function ContentViewer({ item, blobUrl, loading, marking, onMarkComplete 
                     <div style={{ textAlign: 'center', padding: '60px 0', color: 'rgba(255,255,255,0.4)' }}>جارٍ تحميل المستند...</div>
                 ) : blobUrl ? (
                     item.mime_type === 'application/pdf' ? (
-                        <embed src={blobUrl} type="application/pdf" width="100%" height="500" style={{ borderRadius: 12 }} />
+                        <embed src={blobUrl} type="application/pdf" width="100%" height="500" style={{ borderRadius: 12, maxHeight: '70vh' }} />
                     ) : (
                         <a href={blobUrl} download className="btn-outline" style={{ padding: '10px 22px', fontSize: 14 }}>
                             ⬇ تحميل الملف

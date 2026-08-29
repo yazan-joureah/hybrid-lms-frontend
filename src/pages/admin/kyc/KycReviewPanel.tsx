@@ -25,7 +25,7 @@ export function KycReviewPanel({ requestId, onClose, onDecided }: Props) {
 
     return (
         <div style={{ background: 'var(--bg-card)', border: '2px solid #7c3aed', borderRadius: 18, padding: 24 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
                 <h3>مراجعة: {applicant?.full_name || '...'}</h3>
                 <button className="btn-secondary" onClick={onClose}>إغلاق</button>
             </div>
@@ -38,7 +38,7 @@ export function KycReviewPanel({ requestId, onClose, onDecided }: Props) {
                 </p>
             )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
+            <div className="admin-two-col" style={{ marginBottom: 24 }}>
                 <div style={{ textAlign: 'center' }}>
                     <p style={{ fontWeight: 600, marginBottom: 8 }}>صورة الوثيقة</p>
                     {imagesLoading ? (
@@ -61,7 +61,7 @@ export function KycReviewPanel({ requestId, onClose, onDecided }: Props) {
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+            <div className="admin-two-col" style={{ gap: 20 }}>
                 <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: 18 }}>
                     <h4 style={{ marginBottom: 14 }}>قبول الطلب</h4>
                     <div className="field-group" style={{ marginBottom: 12 }}>

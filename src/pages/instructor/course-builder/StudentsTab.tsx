@@ -61,40 +61,42 @@ export function StudentsTab({ students, loading }: StudentsTabProps) {
                     لا يوجد طلاب مطابقون لبحثك.
                 </div>
             ) : (
-                <table className="data-table" style={{ width: '100%' }}>
-                    <thead>
-                        <tr>
-                            <th>الطالب</th>
-                            <th>البريد الإلكتروني</th>
-                            <th>تاريخ التسجيل</th>
-                            <th>الحالة</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {filtered.map(s => {
-                            const meta = STATUS_META[s.status] || { label: s.status, color: 'rgba(255,255,255,0.5)' }
-                            return (
-                                <tr key={s._id}>
-                                    <td>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                            <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg, #7c3aed, #a855f7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
-                                                {(s.student_id?.full_name || '؟')[0]}
+                <div className="table-responsive">
+                    <table className="data-table" style={{ width: '100%' }}>
+                        <thead>
+                            <tr>
+                                <th>الطالب</th>
+                                <th>البريد الإلكتروني</th>
+                                <th>تاريخ التسجيل</th>
+                                <th>الحالة</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {filtered.map(s => {
+                                const meta = STATUS_META[s.status] || { label: s.status, color: 'rgba(255,255,255,0.5)' }
+                                return (
+                                    <tr key={s._id}>
+                                        <td>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                                <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg, #7c3aed, #a855f7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+                                                    {(s.student_id?.full_name || '؟')[0]}
+                                                </div>
+                                                <span>{s.student_id?.full_name || 'طالب محذوف'}</span>
                                             </div>
-                                            <span>{s.student_id?.full_name || 'طالب محذوف'}</span>
-                                        </div>
-                                    </td>
-                                    <td style={{ color: 'rgba(255,255,255,0.6)' }}>{s.student_id?.email || '—'}</td>
-                                    <td style={{ color: 'rgba(255,255,255,0.5)' }}>{new Date(s.enrolled_at).toLocaleDateString('ar')}</td>
-                                    <td>
-                                        <span className="badge" style={{ background: `${meta.color}22`, color: meta.color, border: `1px solid ${meta.color}44` }}>
-                                            {meta.label}
-                                        </span>
-                                    </td>
-                                </tr>
-                            )
-                        })}
-                    </tbody>
-                </table>
+                                        </td>
+                                        <td style={{ color: 'rgba(255,255,255,0.6)' }}>{s.student_id?.email || '—'}</td>
+                                        <td style={{ color: 'rgba(255,255,255,0.5)' }}>{new Date(s.enrolled_at).toLocaleDateString('ar')}</td>
+                                        <td>
+                                            <span className="badge" style={{ background: `${meta.color}22`, color: meta.color, border: `1px solid ${meta.color}44` }}>
+                                                {meta.label}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                )
+                            })}
+                        </tbody>
+                    </table>
+                </div>
             )}
         </div>
     )

@@ -16,6 +16,7 @@ export default function GoogleCallback() {
   const [loading, setLoading] = useState(false)
 
   const [birthDate, setBirthDate] = useState('')
+  const [role, setRole] = useState<'Student' | 'Instructor'>('Student')
   const [linkPassword, setLinkPassword] = useState('')
   const [guardianEmail, setGuardianEmail] = useState('')
 
@@ -71,7 +72,7 @@ export default function GoogleCallback() {
     setError('')
     setLoading(true)
     try {
-      const result = await googleRegisterConfirm(pendingToken, birthDate)
+      const result = await googleRegisterConfirm(pendingToken, birthDate, role)
       if (result.requiresGuardianEmail && result.guardianPendingToken) {
         setPendingToken(result.guardianPendingToken)
         setStep('guardian-email')
@@ -122,25 +123,14 @@ export default function GoogleCallback() {
   }
 
   return (
-    <div style={{
-      minHeight: '100vh', direction: 'rtl',
-      background: 'linear-gradient(135deg, #080320 0%, #1a0550 40%, #0d0340 100%)',
-      display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden',
-    }}>
+    <div className="auth-shell">
       <div style={{ padding: '20px 28px', position: 'relative', zIndex: 1 }}>
         <button onClick={() => navigate('landing')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
           <EdujarLogo width={130} height={34} />
         </button>
       </div>
-
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px 16px', position: 'relative', zIndex: 1 }}>
-        <div style={{
-          width: '100%', maxWidth: 440,
-          background: 'rgba(16,6,52,0.85)', backdropFilter: 'blur(28px)',
-          border: '1px solid rgba(255,255,255,0.1)', borderRadius: 24,
-          padding: '40px 36px', boxShadow: '0 24px 80px rgba(0,0,0,0.5)',
-          textAlign: 'center',
-        }}>
+      <div className="auth-content">
+        <div className="auth-card" style={{ maxWidth: 440, textAlign: 'center' }}>
           {step === 'processing' && (
             <>
               <div style={{ fontSize: 36, marginBottom: 16 }}>⏳</div>
@@ -153,6 +143,19 @@ export default function GoogleCallback() {
               <div style={{ fontSize: 36, marginBottom: 12 }}>🎂</div>
               <h1 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 8px' }}>خطوة أخيرة</h1>
               <p style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.5)', margin: '0 0 20px' }}>نحتاج تاريخ ميلادك لإتمام إنشاء حسابك</p>
+              <div style={{ marginBottom: 16, textAlign: 'right' }}>
+                <label className="form-label">نوع الحساب</label>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <label style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 13.5, cursor: 'pointer' }}>
+                    <input type="radio" checked={role === 'Student'} onChange={() => setRole('Student')} disabled={loading} />
+                    طالب
+                  </label>
+                  <label style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 13.5, cursor: 'pointer' }}>
+                    <input type="radio" checked={role === 'Instructor'} onChange={() => setRole('Instructor')} disabled={loading} />
+                    مدرّس
+                  </label>
+                </div>
+              </div>
               <div style={{ marginBottom: 16, textAlign: 'right' }}>
                 <label className="form-label">تاريخ الميلاد</label>
                 <input className="form-input" type="date" value={birthDate} onChange={e => setBirthDate(e.target.value)} disabled={loading} />

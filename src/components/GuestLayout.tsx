@@ -20,13 +20,13 @@ export default function GuestLayout({ children }: Props) {
                     backdropFilter: 'blur(20px)',
                     borderBottom: '1px solid rgba(255,255,255,0.07)',
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '0 24px',
                 }}
+                className="app-header"
             >
                 <div style={{ cursor: 'pointer' }} onClick={() => navigate('landing')}>
                     <EdujarLogo width={120} height={32} />
                 </div>
-                <div style={{ display: 'flex', gap: 10 }}>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                     <button className="btn-outline" style={{ padding: '8px 18px', fontSize: 13.5 }} onClick={() => navigate('login')}>
                         تسجيل الدخول
                     </button>

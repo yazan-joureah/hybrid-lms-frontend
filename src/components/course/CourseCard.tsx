@@ -1,5 +1,6 @@
 import type { CourseSummary } from '../../services/courseService'
 import { getCourseCoverUrl, PLACEHOLDER_IMAGE, handleImageFallback } from '../../utils/imageUtils'
+import { formatCurrency } from '../../services/payService'
 
 interface Props {
     course: CourseSummary
@@ -34,7 +35,7 @@ export function CourseCard({ course, onClick }: Props) {
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.07)' }}>
                     <span style={{ fontSize: 16, fontWeight: 800, color: '#a855f7' }}>
-                        {course.course_type === 'free' ? 'مجاني' : `${course.price} ر.س`}
+                        {course.course_type === 'free' ? 'مجاني' : formatCurrency(course.price || 0)}
                     </span>
                     <button className="btn-primary" style={{ padding: '7px 16px', fontSize: 12.5 }} onClick={e => { e.stopPropagation(); onClick() }}>
                         عرض التفاصيل

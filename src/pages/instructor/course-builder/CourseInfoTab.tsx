@@ -1,5 +1,7 @@
 // src/pages/instructor/course-builder/CourseInfoTab.tsx
 import { useState, useEffect } from 'react'
+import { useConfirmDialog } from '../../../hooks/useConfirmDialog'
+import { ConfirmDialog } from '../../../components/common/ConfirmDialog'
 import type { useCourseDetail } from '../../../hooks/course/useCourseDetail'
 import { CourseInfoForm } from '../../../components/course/CourseInfoForm'
 import { getCourseCoverUrl, PLACEHOLDER_IMAGE, handleImageFallback } from '../../../utils/imageUtils'
@@ -17,6 +19,7 @@ export function CourseInfoTab({
     detail, loading, saving, coverUploading, updateCourse, deleteCourse, uploadCover, submitForReview, cancelReview,
     finalExam, quizzesLoading, onDeleted, onGoToQuizzesTab,
 }: CourseInfoTabProps) {
+    const { confirm, dialogProps } = useConfirmDialog()
     const [editMode, setEditMode] = useState(false)
     const [editForm, setEditForm] = useState<CourseFormPayload | null>(null)
 
@@ -40,9 +43,10 @@ export function CourseInfoTab({
     }
 
     const handleDelete = async () => {
-        if (!window.confirm('هل أنت متأكد من حذف هذا الكورس؟ لا يمكن التراجع عن هذا الإجراء.')) return
-        const ok = await deleteCourse()
-        if (ok) onDeleted()
+        const ok = await confirm('هل أنت متأكد من حذف هذا الكورس؟ لا يمكن التراجع عن هذا الإجراء.', { title: 'حذف الكورس', danger: true })
+        if (!ok) return
+        const ok2 = await deleteCourse()
+        if (ok2) onDeleted()
     }
 
     const canSubmitReview = Boolean(finalExam && finalExam.status === 'published')
@@ -50,6 +54,7 @@ export function CourseInfoTab({
 
     return (
         <div>
+            {dialogProps && <ConfirmDialog {...dialogProps} />}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20, flexWrap: 'wrap', gap: 10 }}>
                 <div style={{ display: 'flex', gap: 10 }}>
                     {(detail.status === 'draft' || detail.status === 'rejected') && (

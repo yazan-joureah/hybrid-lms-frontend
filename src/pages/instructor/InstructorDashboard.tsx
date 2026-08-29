@@ -1,5 +1,10 @@
 import { useNav } from '../../context/NavContext'
 
+// ⚠️ TODO: كل البيانات هنا لا تزال mock مؤقتاً (metrics, submissions, sessions).
+// حسب القرار السابق: "عند بناء الميزة نبدأ من الصفر" — هذا الملف بانتظار
+// دفعة لاحقة لربطه ببيانات حقيقية (useInstructorCourses + خدمات أخرى).
+// التعديل الحالي يقتصر على: (1) توافق التنقل مع الصفحات الموجودة فعلياً
+// بعد حذف الصفحات الوهمية المستقلة، (2) التصميم المتجاوب.
 export default function InstructorDashboard() {
   const { navigate } = useNav()
 
@@ -23,7 +28,7 @@ export default function InstructorDashboard() {
 
   return (
     <div className="page-wrapper">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 14 }}>
         <div>
           <h2 className="section-title">مرحباً، خالد! 👋</h2>
           <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14, margin: '4px 0 0' }}>لديك 3 تقييمات معلقة وحصة قادمة غداً</p>
@@ -33,7 +38,7 @@ export default function InstructorDashboard() {
         </button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 18, marginBottom: 28 }}>
+      <div className="grid-4" style={{ marginBottom: 28 }}>
         {metrics.map(m => (
           <div key={m.label} className="metric-card">
             <div style={{ width: 42, height: 42, borderRadius: 12, background: `${m.color}22`, border: `1px solid ${m.color}44`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, marginBottom: 14 }}>{m.icon}</div>
@@ -44,25 +49,25 @@ export default function InstructorDashboard() {
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 22, marginBottom: 22 }}>
+      <div className="instr-dash-2col">
         {/* Recent submissions */}
         <div style={{ background: 'var(--bg-card)', backdropFilter: 'blur(20px)', border: '1px solid var(--border)', borderRadius: 18, padding: '22px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
             <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>التسليمات الأخيرة</h3>
-            <button className="btn-ghost" style={{ fontSize: 12.5, color: '#a855f7', padding: '4px 8px' }} onClick={() => navigate('grading-manager')}>عرض الكل ←</button>
+            <button className="btn-ghost" style={{ fontSize: 12.5, color: '#a855f7', padding: '4px 8px' }} onClick={() => navigate('course-builder')}>عرض الكل ←</button>
           </div>
           {submissions.map((s, i) => (
             <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
               <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg, #7c3aed, #a855f7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
                 {s.student[0]}
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ flex: '1 1 120px', minWidth: 0 }}>
                 <div style={{ fontSize: 13.5, fontWeight: 600 }}>{s.student}</div>
                 <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.assignment} — {s.course}</div>
               </div>
               <div style={{ textAlign: 'left', flexShrink: 0 }}>
                 <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>{s.time}</div>
-                <button className="btn-primary" style={{ padding: '4px 12px', fontSize: 11.5, marginTop: 4 }} onClick={() => navigate('grading-manager')}>تقييم</button>
+                <button className="btn-primary" style={{ padding: '4px 12px', fontSize: 11.5, marginTop: 4 }} onClick={() => navigate('course-builder')}>تقييم</button>
               </div>
             </div>
           ))}
@@ -70,13 +75,13 @@ export default function InstructorDashboard() {
 
         {/* Upcoming sessions */}
         <div style={{ background: 'var(--bg-card)', backdropFilter: 'blur(20px)', border: '1px solid var(--border)', borderRadius: 18, padding: '22px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
             <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>الحصص القادمة</h3>
-            <button className="btn-ghost" style={{ fontSize: 12.5, color: '#a855f7', padding: '4px 8px' }} onClick={() => navigate('live-controller')}>إدارة ←</button>
+            <button className="btn-ghost" style={{ fontSize: 12.5, color: '#a855f7', padding: '4px 8px' }} onClick={() => navigate('course-builder')}>إدارة ←</button>
           </div>
           {sessions.map((s, i) => (
             <div key={i} style={{ background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.2)', borderRadius: 14, padding: '14px', marginBottom: 12 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10, flexWrap: 'wrap', gap: 8 }}>
                 <div>
                   <div style={{ fontSize: 14.5, fontWeight: 700, marginBottom: 3 }}>{s.course}</div>
                   <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.55)' }}>{s.lesson}</div>
@@ -86,11 +91,11 @@ export default function InstructorDashboard() {
                   <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>👥 {s.students} طالب</div>
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button className="btn-primary" style={{ flex: 1, justifyContent: 'center', padding: '8px', fontSize: 12.5 }} onClick={() => navigate('live-controller')}>
-                  🚀 بدء البث
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <button className="btn-primary" style={{ flex: '1 1 100px', justifyContent: 'center', padding: '8px', fontSize: 12.5 }} onClick={() => navigate('course-builder')}>
+                  🚀 إدارة الحصة
                 </button>
-                <button className="btn-outline" style={{ padding: '8px 14px', fontSize: 12.5 }} onClick={() => navigate('attendance-manager')}>
+                <button className="btn-outline" style={{ flex: '1 1 100px', justifyContent: 'center', padding: '8px 14px', fontSize: 12.5 }} onClick={() => navigate('course-builder')}>
                   ✅ رمز الحضور
                 </button>
               </div>
@@ -105,10 +110,7 @@ export default function InstructorDashboard() {
         <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
           {[
             ['🏗️', 'كورس جديد', 'course-builder'],
-            ['✅', 'رمز الحضور', 'attendance-manager'],
-            ['📝', 'اختبار جديد', 'quiz-creator'],
-            ['📡', 'بدء بث', 'live-controller'],
-            ['📈', 'التقارير', 'instructor-analytics'],
+            ['⚙️', 'الإعدادات', 'profile'],
           ].map(([icon, label, page]) => (
             <button
               key={label}

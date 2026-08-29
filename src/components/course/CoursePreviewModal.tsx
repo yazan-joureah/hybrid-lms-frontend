@@ -1,10 +1,14 @@
 // src/components/course/CoursePreviewModal.tsx
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useToast } from '../../context/ToastContext'
+import { useNav } from '../../context/NavContext'
 import { ModalPortal } from '../common/ModalPortal'
 import { courseService, type CourseSummary, type CourseUnit, type ContentItem } from '../../services/courseService'
 import { getErrorMessage } from '../../utils/errorMessages'
 import { getCourseCoverUrl, PLACEHOLDER_IMAGE, handleImageFallback } from '../../utils/imageUtils'
+import { CHECKOUT_PATH, MY_COURSES_DETAIL_PATH, MY_COURSES_LIST_PATH } from '../../routes/dynamicRoutes'
+import { formatCurrency } from '../../services/payService'
 
 const CONTENT_ICONS: Record<ContentItem['content_type'], string> = {
     video: '🎥', document: '📄', link: '🔗', text: '📝',
@@ -20,6 +24,8 @@ interface Props {
 
 export function CoursePreviewModal({ courseId, viewerState, onClose, onEnrolled, onRequireAuth }: Props) {
     const { success, error: toastError, info } = useToast()
+    const routerNavigate = useNavigate()
+
     const [course, setCourse] = useState<CourseSummary | null>(null)
     const [units, setUnits] = useState<CourseUnit[]>([])
     const [firstUnitContent, setFirstUnitContent] = useState<ContentItem[] | null>(null)
@@ -38,13 +44,12 @@ export function CoursePreviewModal({ courseId, viewerState, onClose, onEnrolled,
                 setCourse(c)
                 setUnits(u)
 
-                // معاينة مجانية: نجيب محتوى الوحدة الأولى فقط
                 if (u.length > 0) {
                     try {
                         const detail = await courseService.getUnitDetail(courseId, u[0]._id)
                         if (!cancelled) setFirstUnitContent(detail?.content || [])
                     } catch {
-                        if (!cancelled) setFirstUnitContent([]) // فشل جلب المعاينة لا يجب أن يكسر النافذة كاملة
+                        if (!cancelled) setFirstUnitContent([])
                     }
                 } else if (!cancelled) {
                     setFirstUnitContent([])
@@ -54,8 +59,7 @@ export function CoursePreviewModal({ courseId, viewerState, onClose, onEnrolled,
             .finally(() => { if (!cancelled) setLoading(false) })
 
         return () => { cancelled = true }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [courseId])
+    }, [courseId, toastError, onClose])
 
     if (!courseId) return null
 
@@ -63,13 +67,24 @@ export function CoursePreviewModal({ courseId, viewerState, onClose, onEnrolled,
         setEnrolling(true)
         try {
             const enrollment = await courseService.enroll(courseId)
-            if (enrollment?.status === 'pending_payment') {
-                info('تم إنشاء طلب التسجيل بنجاح. ميزة الدفع الإلكتروني ستكون متاحة قريباً.')
-            } else {
-                success('تم تسجيلك في الكورس بنجاح!')
+            if (!enrollment) {
+                toastError('حدث خطأ أثناء التسجيل، حاول مجدداً.')
+                return
             }
+
             onEnrolled()
-            onClose()
+
+            if (enrollment.status === 'active') {
+                routerNavigate(MY_COURSES_DETAIL_PATH(enrollment._id))
+                onClose()
+            } else if (enrollment.status === 'pending_payment') {
+                routerNavigate(CHECKOUT_PATH(enrollment._id))
+                onClose()
+            } else {
+                info('تم التسجيل بنجاح، يمكنك متابعة الكورس من صفحة كورساتي.')
+                routerNavigate(MY_COURSES_LIST_PATH)
+                onClose()
+            }
         } catch (err) {
             toastError(getErrorMessage(err))
         } finally {
@@ -79,7 +94,6 @@ export function CoursePreviewModal({ courseId, viewerState, onClose, onEnrolled,
 
     return (
         <ModalPortal>
-
             <div
                 style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, backdropFilter: 'blur(4px)' }}
                 onClick={enrolling ? undefined : onClose}
@@ -106,7 +120,6 @@ export function CoursePreviewModal({ courseId, viewerState, onClose, onEnrolled,
                             <h2 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 10px' }}>{course.title}</h2>
                             <div style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.6)', marginBottom: 20, lineHeight: 1.6 }}>{course.description}</div>
 
-                            {/* قائمة الوحدات */}
                             <div style={{ marginBottom: 16 }}>
                                 <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 10 }}>محتوى الكورس:</div>
                                 {units.length === 0 ? (
@@ -122,7 +135,6 @@ export function CoursePreviewModal({ courseId, viewerState, onClose, onEnrolled,
                                 )}
                             </div>
 
-                            {/* معاينة فعلية لمحتوى الوحدة الأولى */}
                             {firstUnitContent && firstUnitContent.length > 0 && (
                                 <div style={{ marginBottom: 24, background: 'rgba(124,58,237,0.06)', border: '1px solid rgba(124,58,237,0.2)', borderRadius: 14, padding: 16 }}>
                                     <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12, color: '#c4b5fd' }}>🔓 معاينة من {units[0]?.title}</div>
@@ -160,7 +172,7 @@ export function CoursePreviewModal({ courseId, viewerState, onClose, onEnrolled,
 
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
                                 <span style={{ fontSize: 22, fontWeight: 800, color: '#a855f7' }}>
-                                    {course.course_type === 'free' ? 'مجاني' : `${course.price} ر.س`}
+                                    {course.course_type === 'free' ? 'مجاني' : formatCurrency(course.price || 0)}
                                 </span>
                                 <div style={{ display: 'flex', gap: 10 }}>
                                     <button className="btn-outline" style={{ padding: '10px 20px', fontSize: 14 }} disabled={enrolling} onClick={onClose}>إغلاق</button>

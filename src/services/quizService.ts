@@ -148,7 +148,7 @@ export const quizService = {
 
     startAttempt: async (quizId: string): Promise<ActiveAttempt> => {
         const res = await API.post(`/quizzes/${quizId}/start`)
-        return res.data.data
+        return res.data?.data
     },
 
     saveAnswer: async (attemptId: string, questionId: string, choiceId: string): Promise<void> => {
@@ -157,6 +157,6 @@ export const quizService = {
 
     submitAttempt: async (attemptId: string): Promise<QuizResult> => {
         const res = await API.post(`/quizzes/attempts/${attemptId}/submit`)
-        return res.data.data
+        return res.data?.data
     },
 }

@@ -108,13 +108,13 @@
 //       </defs>
 //       {/* 1. المربع البنفسجي في البداية عند x=0 */}
 //       <rect x="0" y="0" width="48" height="48" rx="12" fill={`url(#${uid}-g)`} />
-      
+
 //       {/* 2. أيقونة الكتاب داخل المربع */}
 //       <svg x="12" y="12" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round">
 //         <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
 //         <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
 //       </svg>
-      
+
 //       {/* 3. النص أزحناه إلى x=62 ليكون بجهة اليسار بجانب المربع تماماً */}
 //       <text x="62" y="33" fontFamily="Outfit, sans-serif, system-ui" fontSize="24" fontWeight="800" fill="#ffffff">
 //         Edujar
@@ -171,7 +171,7 @@ export default function EdujarLogo({
     <svg
       width={width}
       height={height}
-      viewBox="0 0 180 48"
+      viewBox="0 0 230 48"
       className={className}
       style={{ direction: 'ltr', ...style }}
       xmlns="http://www.w3.org/2000/svg"
@@ -192,7 +192,7 @@ export default function EdujarLogo({
       </g>
 
       <text x="62" y="33" fontFamily="Outfit, sans-serif" fontSize="24" fontWeight="800" fill="#fff">
-        Edujar
+        Hybrid LMS
       </text>
     </svg>
   )

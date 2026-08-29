@@ -1,5 +1,6 @@
 // src/context/ToastContext.tsx
-import { createContext, useContext, useState, useCallback, useRef, type ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useMemo, useRef, type ReactNode } from 'react'
+import { ModalPortal } from '../components/common/ModalPortal'
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning'
 
@@ -46,13 +47,27 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         timers.current[id] = setTimeout(() => dismiss(id), duration)
     }, [dismiss])
 
-    const value: ToastContextType = {
+    // ⚠️ مهم جداً: success/error/info/warning لازم يكون لهن مرجع (reference)
+    // ثابت بين الـ renders. لو عرّفناهن inline جوا الـ value object العادي،
+    // كل مرة الـ ToastProvider يعمل re-render (مثلاً بسبب setToasts نفسها)
+    // بيتولد مرجع دالة جديد لكل واحدة، وأي useEffect بصفحة تانية حاطط
+    // toastError/toastSuccess بمصفوفة الاعتماديات (deps array) رح يشوفها
+    // "تغيّرت" ويعيد التنفيذ من جديد → لو الـ effect نفسه بينادي toastError
+    // بحالة الفشل (زي أي catch block)، هاد بيعمل حلقة لا نهائية:
+    // fetch يفشل → toast → re-render → مرجع جديد → effect يعيد نفسه → fetch
+    // يفشل من جديد... (شفنا هالضبط بـ AdminPaymentDetail.tsx).
+    const success = useCallback((m: string, d?: number) => showToast(m, 'success', d), [showToast])
+    const error = useCallback((m: string, d?: number) => showToast(m, 'error', d), [showToast])
+    const info = useCallback((m: string, d?: number) => showToast(m, 'info', d), [showToast])
+    const warning = useCallback((m: string, d?: number) => showToast(m, 'warning', d), [showToast])
+
+    const value = useMemo(() => ({
         showToast,
-        success: (m, d) => showToast(m, 'success', d),
-        error: (m, d) => showToast(m, 'error', d),
-        info: (m, d) => showToast(m, 'info', d),
-        warning: (m, d) => showToast(m, 'warning', d),
-    }
+        success,
+        error,
+        info,
+        warning,
+    }), [showToast, success, error, info, warning])
 
     return (
         <ToastContext.Provider value={value}>
@@ -60,38 +75,40 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             <style>{`
         @keyframes toast-in { from { opacity:0; transform: translateY(-10px); } to { opacity:1; transform: translateY(0); } }
       `}</style>
-            <div
-                style={{
-                    position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)',
-                    zIndex: 500, display: 'flex', flexDirection: 'column', gap: 10,
-                    width: '100%', maxWidth: 420, padding: '0 16px', pointerEvents: 'none',
-                }}
-            >
-                {toasts.map(t => {
-                    const cfg = TOAST_CONFIG[t.type]
-                    return (
-                        <div
-                            key={t.id}
-                            style={{
-                                pointerEvents: 'auto',
-                                background: 'rgba(12,4,45,0.97)', backdropFilter: 'blur(20px)',
-                                border: `1px solid ${cfg.border}`, borderRight: `4px solid ${cfg.color}`,
-                                borderRadius: 14, padding: '13px 16px', display: 'flex', gap: 12, alignItems: 'flex-start',
-                                boxShadow: '0 12px 32px rgba(0,0,0,0.45)', animation: 'toast-in 0.25s ease-out',
-                            }}
-                        >
-                            <span style={{ fontSize: 18, flexShrink: 0 }}>{cfg.icon}</span>
-                            <span style={{ flex: 1, fontSize: 13.5, color: '#fff', lineHeight: 1.5 }}>{t.message}</span>
-                            <button
-                                onClick={() => dismiss(t.id)}
-                                style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontSize: 15, padding: 0, flexShrink: 0 }}
+            <ModalPortal>
+                <div
+                    style={{
+                        position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)',
+                        zIndex: 500, display: 'flex', flexDirection: 'column', gap: 10,
+                        width: '100%', maxWidth: 420, padding: '0 16px', pointerEvents: 'none',
+                    }}
+                >
+                    {toasts.map(t => {
+                        const cfg = TOAST_CONFIG[t.type]
+                        return (
+                            <div
+                                key={t.id}
+                                style={{
+                                    pointerEvents: 'auto',
+                                    background: 'rgba(12,4,45,0.97)', backdropFilter: 'blur(20px)',
+                                    border: `1px solid ${cfg.border}`, borderRight: `4px solid ${cfg.color}`,
+                                    borderRadius: 14, padding: '13px 16px', display: 'flex', gap: 12, alignItems: 'flex-start',
+                                    boxShadow: '0 12px 32px rgba(0,0,0,0.45)', animation: 'toast-in 0.25s ease-out',
+                                }}
                             >
-                                ✕
-                            </button>
-                        </div>
-                    )
-                })}
-            </div>
+                                <span style={{ fontSize: 18, flexShrink: 0 }}>{cfg.icon}</span>
+                                <span style={{ flex: 1, fontSize: 13.5, color: '#fff', lineHeight: 1.5 }}>{t.message}</span>
+                                <button
+                                    onClick={() => dismiss(t.id)}
+                                    style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontSize: 15, padding: 0, flexShrink: 0 }}
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                        )
+                    })}
+                </div>
+            </ModalPortal>
         </ToastContext.Provider>
     )
 }

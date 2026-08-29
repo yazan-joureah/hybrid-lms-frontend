@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNav, type Role } from '../context/NavContext'
 import { useAuthApi, mapRoleToBackend, getCodeErrorMessage } from '../context/AuthApiContext'
 import EdujarLogo from '../components/EdujarLogo'
+import OtpInput from '../components/common/OtpInput' // <-- إضافة
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 
@@ -17,9 +18,15 @@ function isMinor(dob: string): boolean {
 
 export default function Register() {
   const { navigate } = useNav()
-  const { register: apiRegister, verifyEmail: apiVerifyEmail, resendVerification, getErrorMessage } = useAuthApi()
+  const {
+    register: apiRegister,
+    verifyEmail: apiVerifyEmail,
+    resendVerification,
+    getErrorMessage,
+    googleLogin,
+  } = useAuthApi()
 
-  const [step, setStep] = useState(1) // 1: بيانات الحساب, 2: تفاصيل إضافية, 3: تحقق الإيميل
+  const [step, setStep] = useState(1)
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -36,7 +43,8 @@ export default function Register() {
   const [infoMsg, setInfoMsg] = useState('')
 
   // خطوة تحقق الإيميل
-  const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', ''])
+  const [otpCode, setOtpCode] = useState('')           // <-- تغيير
+  const [otpKey, setOtpKey] = useState(0)              // <-- جديد
   const [otpError, setOtpError] = useState('')
   const [cooldown, setCooldown] = useState(0)
 
@@ -48,10 +56,6 @@ export default function Register() {
   const strengthLabels = ['', 'ضعيفة', 'مقبولة', 'جيدة', 'قوية جداً']
   const strengthColors = ['', '#ef4444', '#f59e0b', '#10b981', '#06b6d4']
 
-  // ملاحظة: phone / bio / gender حاليًا بيتخزنوا محليًا فقط لعرضهم بالواجهة —
-  // الباك (حسب endpoint التسجيل الحالي) بياخد فقط: full_name, email, password,
-  // birth_date, role, guardian_email. لما يصير عندك endpoint لتحديث البروفايل،
-  // ابعتلي إياه ونضيف استدعاء بعد التحقق من الإيميل لحفظ هالحقول فعليًا بالباك.
   const handleRegister = async () => {
     if (password !== confirmPass) {
       setError('كلمتا المرور غير متطابقتين')
@@ -70,7 +74,6 @@ export default function Register() {
         email: email.trim().toLowerCase(),
         password,
         birth_date: dob,
-        // الباك بيتوقع 'Student' / 'Instructor' بأحرف كبيرة (نفس منطق كود صاحبك)
         role: mapRoleToBackend(role),
         guardian_email: minor ? guardianEmail.trim() : undefined,
         privacy_consent_version: '1.0',
@@ -89,26 +92,16 @@ export default function Register() {
     }
   }
 
-  const handleOtpDigit = (idx: number, val: string) => {
-    if (val.length > 1) return
-    const next = [...otpDigits]
-    next[idx] = val.replace(/[^0-9]/g, '')
-    setOtpDigits(next)
-    if (val && idx < 5) {
-      document.getElementById(`register-otp-${idx + 1}`)?.focus()
-    }
-  }
-
+  // OTP verification
   const handleVerifyEmail = async () => {
-    const code = otpDigits.join('')
-    if (code.length !== 6) {
+    if (otpCode.length !== 6) {
       setOtpError('أدخل الرمز المكوّن من 6 أرقام كاملاً')
       return
     }
     setOtpError('')
     setLoading(true)
     try {
-      const result = await apiVerifyEmail(email.trim().toLowerCase(), code)
+      const result = await apiVerifyEmail(email.trim().toLowerCase(), otpCode)
       if (result?.nextStep === 'guardian_pending') {
         setInfoMsg('تم التحقق! بانتظار موافقة ولي الأمر الآن.')
       } else {
@@ -116,8 +109,9 @@ export default function Register() {
       }
       setTimeout(() => navigate('login'), 2000)
     } catch (err) {
-      // نفس أكواد الخطأ المحددة يلي بكود صاحبك بالضبط (INVALID_CODE, CODE_EXPIRED, TOO_MANY_ATTEMPTS)
       setOtpError(getCodeErrorMessage(err, getErrorMessage(err)))
+      setOtpCode('')
+      setOtpKey(k => k + 1)
     } finally {
       setLoading(false)
     }
@@ -143,30 +137,21 @@ export default function Register() {
   }
 
   return (
-    <div style={{
-      minHeight: '100vh', direction: 'rtl',
-      background: 'linear-gradient(135deg, #080320 0%, #1a0550 40%, #0d0340 100%)',
-      display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden',
-    }}>
+    <div className="auth-shell">
       <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
         <div style={{ position: 'absolute', top: '10%', left: '5%', width: 400, height: 400, borderRadius: '50%', background: 'radial-gradient(circle, rgba(124,58,237,0.2) 0%, transparent 70%)' }} />
         <div style={{ position: 'absolute', bottom: '15%', right: '10%', width: 300, height: 300, borderRadius: '50%', background: 'radial-gradient(circle, rgba(168,85,247,0.14) 0%, transparent 70%)' }} />
       </div>
 
-      <div style={{ padding: '20px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', zIndex: 1 }}>
+      <div className="auth-header">
         <button onClick={() => navigate('landing')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
           <EdujarLogo width={130} height={34} />
         </button>
         <button className="btn-ghost" onClick={() => navigate('landing')}>الرئيسية</button>
       </div>
 
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px 16px', position: 'relative', zIndex: 1 }}>
-        <div style={{
-          width: '100%', maxWidth: 500,
-          background: 'rgba(16,6,52,0.85)', backdropFilter: 'blur(28px)',
-          border: '1px solid rgba(255,255,255,0.1)', borderRadius: 24,
-          padding: '40px 36px', boxShadow: '0 24px 80px rgba(0,0,0,0.55)',
-        }}>
+      <div className="auth-content">
+        <div className="auth-card" style={{ maxWidth: 500 }}>
           {/* Steps */}
           <div style={{ display: 'flex', gap: 8, marginBottom: 28 }}>
             {[1, 2, 3].map(s => (
@@ -262,7 +247,7 @@ export default function Register() {
                 {password.length > 0 && (
                   <div style={{ marginTop: 8 }}>
                     <div style={{ display: 'flex', gap: 4, marginBottom: 5 }}>
-                      {[1,2,3,4].map(i => (
+                      {[1, 2, 3, 4].map(i => (
                         <div key={i} style={{ flex: 1, height: 3, borderRadius: 3, background: strength >= i ? strengthColors[strength] : 'rgba(255,255,255,0.1)', transition: 'background 0.2s' }} />
                       ))}
                     </div>
@@ -329,6 +314,25 @@ export default function Register() {
                   disabled={loading}
                 >{loading ? '...جارٍ إنشاء الحساب' : 'إنشاء الحساب'}</button>
               </div>
+
+              {/* --- زر Google --- */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 20, marginBottom: 10 }}>
+                <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
+                <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)' }}>أو</span>
+                <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
+              </div>
+
+              <button
+                onClick={googleLogin}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+                  background: 'rgba(255,255,255,0.06)', border: '1.5px solid rgba(255,255,255,0.12)',
+                  borderRadius: 9999, padding: '12px', color: '#fff', fontSize: 15, fontWeight: 600,
+                  cursor: 'pointer', fontFamily: 'inherit', transition: 'background 0.15s',
+                }}
+              >
+                <span>G</span> التسجيل بـ Google
+              </button>
             </>
           )}
 
@@ -342,25 +346,9 @@ export default function Register() {
                 </p>
               </div>
 
-              <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginBottom: 6 }} dir="ltr">
-                {otpDigits.map((v, i) => (
-                  <input
-                    key={i}
-                    id={`register-otp-${i}`}
-                    value={v}
-                    onChange={e => handleOtpDigit(i, e.target.value)}
-                    maxLength={1}
-                    disabled={loading}
-                    style={{
-                      width: 48, height: 54, borderRadius: 12,
-                      background: 'rgba(255,255,255,0.07)',
-                      border: `1.5px solid ${otpError ? '#ef4444' : v ? '#7c3aed' : 'rgba(255,255,255,0.15)'}`,
-                      color: '#fff', fontSize: 22, fontWeight: 700,
-                      textAlign: 'center', outline: 'none', fontFamily: 'inherit',
-                      transition: 'border-color 0.15s',
-                    }}
-                  />
-                ))}
+              {/* استخدم OtpInput بدلاً من الخانات اليدوية */}
+              <div style={{ marginBottom: 6 }}>
+                <OtpInput key={otpKey} onComplete={setOtpCode} error={!!otpError} disabled={loading} />
               </div>
 
               {otpError && <div style={{ textAlign: 'center', color: '#f87171', fontSize: 13, marginBottom: 12, marginTop: 4 }}>{otpError}</div>}

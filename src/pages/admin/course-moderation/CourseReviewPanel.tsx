@@ -38,7 +38,7 @@ export function CourseReviewPanel({ course, onClose, onSubmitReview, onModerateS
 
     return (
         <div style={{ background: 'var(--bg-card)', border: '2px solid #7c3aed', borderRadius: 18, padding: 24 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
                 <h3>مراجعة: {course.title}</h3>
                 <button className="btn-secondary" onClick={onClose}>إلغاء</button>
             </div>
@@ -78,7 +78,7 @@ export function CourseReviewPanel({ course, onClose, onSubmitReview, onModerateS
 
             <hr style={{ margin: '20px 0', borderColor: 'rgba(255,255,255,0.08)' }} />
             <h4 style={{ marginBottom: 12 }}>إجراءات طارئة</h4>
-            <div style={{ display: 'flex', gap: 10 }}>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                 <button className="btn-secondary" style={{ background: '#f59e0b', color: '#fff', border: 'none' }} onClick={() => handleModerate('suspended')}>
                     تعليق فوري
                 </button>

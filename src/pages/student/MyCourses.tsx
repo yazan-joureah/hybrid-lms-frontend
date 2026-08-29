@@ -1,10 +1,13 @@
-import { useState } from 'react'
+// src/pages/student/MyCourses.tsx
+import { useState, useEffect } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
 import { useNav } from '../../context/NavContext'
 import { useToast } from '../../context/ToastContext'
 import { useMyCourses } from '../../hooks/course/useMyCourses'
 import { EnrollmentCard } from '../../components/course/EnrollmentCard'
 import { CourseOverviewPanel } from './my-courses/CourseOverviewPanel'
 import { SkeletonLoader } from '../../components/common/Loading'
+import { CHECKOUT_PATH, MY_COURSES_LIST_PATH, MY_COURSES_DETAIL_PATH } from '../../routes/dynamicRoutes'
 import type { Enrollment, EnrollmentStatus } from '../../services/courseService'
 
 type TabKey = Extract<EnrollmentStatus, 'active' | 'completed' | 'pending_payment' | 'cancelled'>
@@ -18,14 +21,36 @@ const TAB_LABELS: Record<TabKey, string> = {
 
 export default function MyCourses() {
   const { navigate } = useNav()
+  const routerNavigate = useNavigate()
+  const { enrollmentId } = useParams<{ enrollmentId: string }>()
   const { info } = useToast()
   const { enrollments, progressMap, loading, byStatus, refetch } = useMyCourses()
 
   const [activeTab, setActiveTab] = useState<TabKey>('active')
-  const [selected, setSelected] = useState<Enrollment | null>(null)
+
+  // ✅ الـ enrollment المختار هلق مشتق من الـ URL مباشرة، مش من sessionStorage.
+  // إذا الرابط بيشاور على enrollment غير صالح (ملغى/بانتظار دفع/كورس غير منشور)
+  // منرجع تلقائيًا للقائمة — نفس السلوك القديم بالضبط بس عبر الراوتر الحقيقي.
+  useEffect(() => {
+    if (!enrollmentId || loading) return
+    const found = enrollments.find(e => e._id === enrollmentId)
+    if (!found) return // لسا عم يحمّل أو الرابط خاطئ — بيتعامل معه بالعرض تحت
+
+    const course = found.course_id
+    const isValid = found.status !== 'cancelled' &&
+      found.status !== 'pending_payment' &&
+      (!course?.status || course.status === 'published')
+
+    if (!isValid) {
+      routerNavigate(MY_COURSES_LIST_PATH, { replace: true })
+    }
+  }, [enrollmentId, enrollments, loading, routerNavigate])
+
+  const selected: Enrollment | null =
+    enrollmentId ? enrollments.find(e => e._id === enrollmentId) || null : null
 
   const handleBackFromPlayer = () => {
-    setSelected(null)
+    routerNavigate(MY_COURSES_LIST_PATH)
     refetch()
   }
 
@@ -39,13 +64,16 @@ export default function MyCourses() {
 
   const handleCardClick = (enrollment: Enrollment) => {
     const course = enrollment.course_id
-    if (enrollment.status === 'pending_payment') { info('إتمام الدفع غير مفعّل بعد بهذه المرحلة.'); return }
+    if (enrollment.status === 'pending_payment') {
+      routerNavigate(CHECKOUT_PATH(enrollment._id))
+      return
+    }
     if (enrollment.status === 'cancelled') { info('تم إلغاء هذا التسجيل واسترداد المبلغ. لا يمكن الوصول لمحتوى الكورس.'); return }
     if (course?.status && course.status !== 'published') {
       info('هذا الكورس قيد التحديث حالياً من قبل المحاضر وينتظر مراجعة الإدارة. سيعود الوصول تلقائياً بعد الاعتماد.')
       return
     }
-    setSelected(enrollment)
+    routerNavigate(MY_COURSES_DETAIL_PATH(enrollment._id))
   }
 
   if (loading) {
@@ -57,10 +85,19 @@ export default function MyCourses() {
     )
   }
 
-  if (selected) {
+  if (enrollmentId && selected) {
     return (
       <div className="page-wrapper">
         <CourseOverviewPanel enrollment={selected} onBack={handleBackFromPlayer} />
+      </div>
+    )
+  }
+
+  // ✅ الرابط فيه enrollmentId بس لسا ما لقيناه بالقائمة (مثلاً تحديث أو رابط خاطئ)
+  if (enrollmentId && !selected) {
+    return (
+      <div className="page-wrapper">
+        <SkeletonLoader type="row" count={4} />
       </div>
     )
   }
@@ -97,7 +134,7 @@ export default function MyCourses() {
           <div style={{ fontSize: 14.5 }}>لا توجد كورسات في هذا القسم حالياً</div>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 22 }}>
+        <div className="grid-3">
           {visible.map(e => (
             <EnrollmentCard
               key={e._id}

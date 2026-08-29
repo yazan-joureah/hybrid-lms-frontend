@@ -40,7 +40,7 @@ export function CourseListPanel({ courses, selectedId, onSelect, onCreateClick, 
                         style={{
                             background: 'var(--bg-card)', backdropFilter: 'blur(20px)',
                             border: `1px solid ${selectedId === c._id ? 'rgba(124,58,237,0.5)' : 'var(--border)'}`,
-                            borderRadius: 16, padding: '14px 18px', cursor: 'pointer', display: 'flex', gap: 14, alignItems: 'center',
+                            borderRadius: 16, padding: '14px 18px', cursor: 'pointer', display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap',
                         }}
                     >
                         <img
@@ -49,7 +49,7 @@ export function CourseListPanel({ courses, selectedId, onSelect, onCreateClick, 
                             style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 10, flexShrink: 0 }}
                             onError={handleImageFallback}
                         />
-                        <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ flex: '1 1 160px', minWidth: 0 }}>
                             <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>{c.title}</div>
                             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                                 <span className="badge" style={{ background: `${statusMeta.color}22`, color: statusMeta.color, border: `1px solid ${statusMeta.color}44` }}>
@@ -69,7 +69,8 @@ export function CourseListPanel({ courses, selectedId, onSelect, onCreateClick, 
                         </button>
                         <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 16, flexShrink: 0 }}>
                             {selectedId === c._id ? '▲' : '←'}
-                        </span>                    </div>
+                        </span>
+                    </div>
                 )
             })}
         </div>
