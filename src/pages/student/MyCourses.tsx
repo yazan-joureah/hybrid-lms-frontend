@@ -9,6 +9,9 @@ import { CourseOverviewPanel } from './my-courses/CourseOverviewPanel'
 import { SkeletonLoader } from '../../components/common/Loading'
 import { CHECKOUT_PATH, MY_COURSES_LIST_PATH, MY_COURSES_DETAIL_PATH } from '../../routes/dynamicRoutes'
 import type { Enrollment, EnrollmentStatus } from '../../services/courseService'
+import { useEnrollmentActions } from '../../hooks/course/useEnrollmentActions'
+import { RefundRequestModal } from '../payments/student/RefundRequestModal'
+import type { Payment } from '../../services/payService'
 
 type TabKey = Extract<EnrollmentStatus, 'active' | 'completed' | 'pending_payment' | 'cancelled'>
 
@@ -27,6 +30,13 @@ export default function MyCourses() {
   const { enrollments, progressMap, loading, byStatus, refetch } = useMyCourses()
 
   const [activeTab, setActiveTab] = useState<TabKey>('active')
+
+  const {
+    cancelEnrollment, cancellingId,
+    findPaymentForEnrollment, findingPaymentId,
+    requestRefund, submittingRefund,
+  } = useEnrollmentActions()
+  const [refundTarget, setRefundTarget] = useState<Payment | null>(null)
 
   // ✅ الـ enrollment المختار هلق مشتق من الـ URL مباشرة، مش من sessionStorage.
   // إذا الرابط بيشاور على enrollment غير صالح (ملغى/بانتظار دفع/كورس غير منشور)
@@ -74,6 +84,35 @@ export default function MyCourses() {
       return
     }
     routerNavigate(MY_COURSES_DETAIL_PATH(enrollment._id))
+  }
+
+  const handleRequestRefundClick = async (enrollment: Enrollment) => {
+    const payment = await findPaymentForEnrollment(enrollment._id)
+    if (!payment) {
+      info('لم يتم العثور على عملية دفع مرتبطة بهذا التسجيل.')
+      return
+    }
+    setRefundTarget(payment)
+  }
+
+  const handleCancelClick = async (enrollment: Enrollment) => {
+    if (!window.confirm('هل أنت متأكد من إلغاء تسجيلك بهذا الكورس؟')) return
+    const result = await cancelEnrollment(enrollment._id)
+    if (result === 'cancelled') {
+      await refetch()
+    } else if (result === 'refund_required') {
+      info('هذا الكورس مدفوع فعليًا — يرجى تقديم طلب استرداد بدلاً من الإلغاء المباشر.')
+      await handleRequestRefundClick(enrollment)
+    }
+  }
+
+  const handleSubmitRefund = async (reason?: string) => {
+    if (!refundTarget) return
+    const ok = await requestRefund(refundTarget._id, reason)
+    if (ok) {
+      setRefundTarget(null)
+      await refetch()
+    }
   }
 
   if (loading) {
@@ -142,9 +181,21 @@ export default function MyCourses() {
               progressPercentage={progressMap[e.course_id?._id || ''] ?? 0}
               unavailable={Boolean(e.course_id?.status && e.course_id.status !== 'published')}
               onClick={() => handleCardClick(e)}
+              onCancel={() => handleCancelClick(e)}
+              onRequestRefund={() => handleRequestRefundClick(e)}
+              actionLoading={cancellingId === e._id || findingPaymentId === e._id}
             />
           ))}
         </div>
+      )}
+
+      {refundTarget && (
+        <RefundRequestModal
+          payment={refundTarget}
+          onClose={() => setRefundTarget(null)}
+          onSubmit={handleSubmitRefund}
+          submitting={submittingRefund}
+        />
       )}
     </div>
   )

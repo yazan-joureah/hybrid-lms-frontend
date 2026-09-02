@@ -16,7 +16,7 @@ interface Props {
 }
 
 export function KycReviewPanel({ requestId, onClose, onDecided }: Props) {
-    const { applicant, idImageUrl, selfieImageUrl, loading, imagesLoading, actionLoading, approve, reject } =
+    const { applicant, idImageUrl, selfieImageUrl, loading, imagesLoading, actionLoading, approve, reject, yellowWarning } =
         useKycReviewDetail(requestId, () => { onDecided(); onClose() })
 
     const [documentBirthDate, setDocumentBirthDate] = useState('')
@@ -64,6 +64,13 @@ export function KycReviewPanel({ requestId, onClose, onDecided }: Props) {
             <div className="admin-two-col" style={{ gap: 20 }}>
                 <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: 18 }}>
                     <h4 style={{ marginBottom: 14 }}>قبول الطلب</h4>
+                    {yellowWarning && (
+                        <div style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 10, padding: 12, marginBottom: 14 }}>
+                            <p style={{ color: '#fbbf24', fontSize: 12.5, margin: 0 }}>
+                                ⚠️ فارق العمر بين الحساب والوثيقة نحو {yellowWarning.discrepancyYears.toFixed(1)} سنة. راجع الوثيقة بصرياً قبل تأكيد الموافقة.
+                            </p>
+                        </div>
+                    )}
                     <div className="field-group" style={{ marginBottom: 12 }}>
                         <label className="form-label">تاريخ الميلاد بالوثيقة</label>
                         <input className="form-input" type="date" value={documentBirthDate} onChange={e => setDocumentBirthDate(e.target.value)} disabled={actionLoading} />
@@ -72,8 +79,13 @@ export function KycReviewPanel({ requestId, onClose, onDecided }: Props) {
                         <label className="form-label">ملاحظة (اختياري)</label>
                         <input className="form-input" value={optionalNote} onChange={e => setOptionalNote(e.target.value)} disabled={actionLoading} />
                     </div>
-                    <button className="btn-primary" style={{ background: '#16a34a', width: '100%' }} disabled={actionLoading} onClick={() => approve(documentBirthDate, optionalNote)}>
-                        {actionLoading ? '...' : 'قبول الطلب'}
+                    <button
+                        className="btn-primary"
+                        style={{ background: yellowWarning ? '#f59e0b' : '#16a34a', width: '100%' }}
+                        disabled={actionLoading}
+                        onClick={() => approve(documentBirthDate, optionalNote, Boolean(yellowWarning))}
+                    >
+                        {actionLoading ? '...' : yellowWarning ? 'تأكيد الموافقة رغم الفارق' : 'قبول الطلب'}
                     </button>
                 </div>
 

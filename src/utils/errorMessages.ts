@@ -42,6 +42,15 @@ const ERROR_MESSAGES: Record<string, string> = {
     REVIEW_ALREADY_SUBMITTED: 'تم إرسال هذه المراجعة مسبقاً ولم تعد قابلة للوصول.',
     REVIEW_DEADLINE_PASSED: 'انتهى موعد إرسال المراجعات.',
     INCOMPLETE_RUBRIC: 'يجب تقييم كل معايير الرubric قبل الإرسال.',
+    NOT_AGE_FLAGGED: 'هذا الإجراء غير متاح لحالتك الحالية.',
+    CORRECTION_ALREADY_PENDING: 'لديك طلب تصحيح عمر قيد المراجعة من ولي الأمر بالفعل.',
+    GUARDIAN_EMAIL_SAME_AS_STUDENT: 'يجب أن يكون بريد ولي الأمر مختلفاً عن بريدك.',
+    ACCOUNT_NOT_ACTIVE: 'حسابك غير نشط حالياً.',
+    BIRTH_DATE_LOCKED: 'لا يمكن تغيير تاريخ الميلاد بعد التحقق من الهوية (KYC).',
+    STUDENT_HAS_ACTIVE_ENROLLMENTS: 'لا يمكن حذف حسابك لوجود تسجيلات نشطة. الرجاء إلغاء أو استرداد تسجيلاتك أولاً.',
+    INSTRUCTOR_HAS_ACTIVE_COURSES: 'لا يمكن حذف حسابك لوجود كورسات غير مؤرشفة. الرجاء أرشفة جميع كورساتك أولاً.',
+    ALREADY_DELETED: 'هذا الحساب محذوف بالفعل.',
+    USER_NOT_FOUND: 'الحساب غير موجود.',
 }
 
 const DEFAULT_ERROR_MESSAGE = 'حدث خطأ ما. الرجاء المحاولة مرة أخرى.'

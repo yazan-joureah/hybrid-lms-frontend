@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNav } from '../context/NavContext'
+import { useNav, GUARDIAN_MANAGE_TOKEN_KEY } from '../context/NavContext'
 import { useAuthApi, normalizeRole, computeFallbackPage } from '../context/AuthApiContext'
 import EdujarLogo from '../components/EdujarLogo'
 import OtpInput from '../components/common/OtpInput'
@@ -99,6 +99,13 @@ export default function Login() {
       return
     }
 
+    if (step === 'guardian-pending' && token) {
+      sessionStorage.setItem(GUARDIAN_MANAGE_TOKEN_KEY, token)
+      navigate('guardian-manage')
+      cleanUrl()
+      return
+    }
+
     if (googleSuccess) {
       setGoogleRestoring(true)
       restoreSession().then((res) => {
@@ -132,6 +139,13 @@ export default function Login() {
       const result = await apiLogin(email.trim().toLowerCase(), password)
       if (result.mfaRequired) {
         setMfaStep(true)
+      } else if (result.guardianPending) {
+        if (result.guardianManageToken) {
+          sessionStorage.setItem(GUARDIAN_MANAGE_TOKEN_KEY, result.guardianManageToken)
+          navigate('guardian-manage')
+        } else {
+          setError('حسابك بانتظار موافقة ولي الأمر. تحقق من بريدك الإلكتروني للتفاصيل.')
+        }
       } else if (result.user) {
         applyLoggedInUser(result.user)
       }

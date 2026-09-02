@@ -62,13 +62,24 @@ export interface PendingCourseSummary extends CourseSummary {
 }
 
 export type CourseReviewDecision = 'publish' | 'needs_revision' | 'reject'
-export type CourseModerationStatus = 'suspended' | 'archived'
-
+export type CourseModerationStatus = 'suspended' | 'archived' | 'published'
 export interface EnrolledStudent {
     _id: string
     student_id: { _id: string; full_name: string; email: string } | null
     enrolled_at: string
     status: EnrollmentStatus
+}
+
+export interface AdminCourseListParams {
+    status?: string
+    page?: number
+    limit?: number
+}
+
+export interface AdminCourseListResult {
+    courses: PendingCourseSummary[]
+    totalPages: number
+    totalRecords: number
 }
 
 export interface CourseFormPayload {
@@ -148,6 +159,10 @@ export const courseService = {
     getMyCourses: async (): Promise<Enrollment[]> => {
         const res = await API.get('/courses/enrollments/my-courses', { params: { limit: 100 } })
         return res.data?.data?.enrollments || []
+    },
+
+    cancelEnrollment: async (enrollmentId: string): Promise<void> => {
+        await API.delete(`/courses/enrollments/${enrollmentId}`)
     },
 
     getProgressSummary: async (courseId: string): Promise<ProgressSummary | null> => {
@@ -295,6 +310,17 @@ export const courseService = {
     getPendingCourses: async (): Promise<PendingCourseSummary[]> => {
         const res = await API.get('/admin/courses/pending')
         return res.data?.data?.courses || []
+    },
+
+    /** GET /admin/courses?status=&page=&limit= — كل الكورسات (مو بس pending) */
+    getAllCoursesForAdmin: async (params: AdminCourseListParams = {}): Promise<AdminCourseListResult> => {
+        const res = await API.get('/admin/courses', { params })
+        const data = res.data?.data
+        return {
+            courses: data?.courses || [],
+            totalPages: data?.meta?.total_pages || 1,
+            totalRecords: data?.meta?.total_records || 0,
+        }
     },
 
     submitCourseReview: async (courseId: string, decision: CourseReviewDecision, reason?: string): Promise<void> => {

@@ -1,5 +1,6 @@
 // src/services/certService.ts
-import api from '../config/api'
+import axios from 'axios'
+import api, { BASE_URL } from '../config/api'
 
 export type VerifyStatus = 'valid' | 'revoked' | 'not_found';
 
@@ -38,14 +39,18 @@ export interface DownloadCertificateData {
 
 export const certService = {
     /**
-     * Public endpoint to verify a certificate by ID via QR scan or URL lookup.
+     * Public endpoint — NO cookies sent. This page is opened by anonymous
+     * third parties scanning a QR code; it must never require or send
+     * credentials, both for correctness (this exact CORS bug) and for
+     * security (least privilege — no reason to expose session cookies to
+     * a purely public, unauthenticated verification call).
      */
     async verifyCertificate(certificateId: string): Promise<VerifyCertificateResponse> {
-        // Changed: Removed manual API_BASE_URL, relying on your api.ts baseURL instead
-        const response = await api.get<{ success: boolean; data: VerifyCertificateResponse }>(
-            `/cert/verify/${certificateId}`
-        );
-        return response.data.data;
+        const response = await axios.get<{ success: boolean; data: VerifyCertificateResponse }>(
+            `${BASE_URL}/certificates/verify/${certificateId}`,
+            { withCredentials: false }
+        )
+        return response.data.data
     },
 
     /**
@@ -53,9 +58,9 @@ export const certService = {
      */
     async getMyCertificates(): Promise<MyCertificateItem[]> {
         const response = await api.get<{ success: boolean; data: MyCertificateItem[] }>(
-            `/cert/my-certificates`
-        );
-        return response.data.data;
+            `/certificates/my-certificates`
+        )
+        return response.data.data
     },
 
     /**
@@ -63,23 +68,23 @@ export const certService = {
      */
     async downloadCertificate(courseId: string): Promise<DownloadCertificateData> {
         const response = await api.get<{ success: boolean; data: DownloadCertificateData }>(
-            `/cert/download/${courseId}`
-        );
-        return response.data.data;
+            `/certificates/download/${courseId}`
+        )
+        return response.data.data
     },
 
     /**
      * Downloads the raw VC-JWT as a standard Open Badges 3.0 / W3C Verifiable Credential file (.json).
      */
     downloadBadgeJwtFile(filename: string, jwtToken: string): void {
-        const blob = new Blob([jwtToken], { type: 'application/vc+jwt' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+        const blob = new Blob([jwtToken], { type: 'application/vc+jwt' })
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = filename
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(url)
     }
-};
+}

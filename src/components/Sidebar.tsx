@@ -17,6 +17,12 @@ const InstructorNav = [
   { icon: '⚙️', label: 'الإعدادات', page: 'profile' },
 ] as const
 
+const AdminSetupNav = [
+  { icon: '🚀', label: 'إكمال الإعداد (2FA)', page: 'admin-setup' },
+  { icon: '⚙️', label: 'الإعدادات', page: 'profile' },
+] as const
+
+
 // عناصر محدودة تُعرض للمدرّس لحد ما يكمّل KYC/MFA — بس صفحة الإعداد والملف الشخصي
 const InstructorSetupNav = [
   { icon: '🚀', label: 'إكمال الإعداد', page: 'instructor-setup' },
@@ -27,6 +33,7 @@ const InstructorSetupNav = [
 // (وليسوا صفحات/Routes منفصلة)، فما بنحطهم كروابط Sidebar مستقلة
 const AdminNav = [
   { icon: '⊞', label: 'لوحة التحكم', page: 'admin-dashboard' },
+  { icon: '👥', label: 'إدارة الحسابات', page: 'admin-accounts' },
   { icon: '💳', label: 'المدفوعات', page: 'admin-payments' },
   { icon: '↩️', label: 'طلبات الاسترداد', page: 'refunds' },
   { icon: '⚙️', label: 'الإعدادات', page: 'profile' },
@@ -38,13 +45,13 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
-  const { page, navigate, logout, role, userName, userGender, instructorSetupIncomplete } = useNav()
+  const { page, navigate, logout, role, userName, userGender, instructorSetupIncomplete, adminSetupIncomplete } = useNav()
 
   const navItems =
     role === 'instructor'
       ? (instructorSetupIncomplete ? InstructorSetupNav : InstructorNav)
       : role === 'admin' || role === 'superadmin'
-        ? AdminNav
+        ? (adminSetupIncomplete ? AdminSetupNav : AdminNav)
         : StudentNav
 
   const roleLabel =
@@ -78,7 +85,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
               </div>
             </div>
           </div>
-          {instructorSetupIncomplete && (
+          {(instructorSetupIncomplete || adminSetupIncomplete) && (
             <div style={{ marginTop: 8, fontSize: 11.5, color: '#fbbf24', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 8, padding: '6px 10px' }}>
               ⚠️ أكمل التحقق الثنائي والتوثيق لفتح كل الميزات
             </div>

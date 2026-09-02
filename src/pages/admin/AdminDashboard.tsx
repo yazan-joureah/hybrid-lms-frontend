@@ -1,10 +1,15 @@
 // src/pages/admin/AdminDashboard.tsx
 import { useState } from 'react'
+import { useNav } from '../../context/NavContext'
 import { KycTab } from './kyc/KycTab'
 import { CourseModerationTab } from './course-moderation/CourseModerationTab'
+import { SecurityAuditTab } from './security-audit/SecurityAuditTab'
+import { AdminAnalyticsTab } from './analytics/AdminAnalyticsTab'
 
 export default function AdminDashboard() {
-    const [activeTab, setActiveTab] = useState<'kyc' | 'courses'>('kyc')
+    const { role } = useNav()
+    const isSuperAdmin = role === 'superadmin'
+    const [activeTab, setActiveTab] = useState<'kyc' | 'courses' | 'analytics' | 'security-audit'>('kyc')
 
     return (
         <div className="page-wrapper">
@@ -19,9 +24,20 @@ export default function AdminDashboard() {
                 <div className={`tab-item${activeTab === 'courses' ? ' active' : ''}`} onClick={() => setActiveTab('courses')}>
                     مراجعة الكورسات
                 </div>
+                <div className={`tab-item${activeTab === 'analytics' ? ' active' : ''}`} onClick={() => setActiveTab('analytics')}>
+                    📊 إحصائيات المنصة
+                </div>
+                {isSuperAdmin && (
+                    <div className={`tab-item${activeTab === 'security-audit' ? ' active' : ''}`} onClick={() => setActiveTab('security-audit')}>
+                        🛡️ إحصائيات التدقيق الأمني
+                    </div>
+                )}
             </div>
 
-            {activeTab === 'kyc' ? <KycTab /> : <CourseModerationTab />}
+            {activeTab === 'kyc' ? <KycTab />
+                : activeTab === 'courses' ? <CourseModerationTab />
+                    : activeTab === 'analytics' ? <AdminAnalyticsTab />
+                        : isSuperAdmin ? <SecurityAuditTab /> : <KycTab />}
         </div>
     )
 }

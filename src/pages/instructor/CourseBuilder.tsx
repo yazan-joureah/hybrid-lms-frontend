@@ -1,22 +1,37 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useInstructorCourses } from '../../hooks/course/useInstructorCourses'
 import { CourseListPanel } from './course-builder/CourseListPanel'
-import { CourseDetailPanel } from './course-builder/CourseDetailPanel'
+import { CourseDetailPanel, type TabKey } from './course-builder/CourseDetailPanel'
 import { CreateCourseModal } from './course-builder/CreateCourseModal'
 import { SkeletonLoader } from '../../components/common/Loading'
 import { CourseContentPreviewModal } from '../../components/course/CourseContentPreviewModal'
 
 export default function CourseBuilder() {
   const { courses, loading, refetch } = useInstructorCourses()
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const courseIdFromQuery = searchParams.get('courseId')
+  const tabFromQuery = searchParams.get('tab') as TabKey | null
+
+  const [selectedId, setSelectedId] = useState<string | null>(courseIdFromQuery)
   const [showCreate, setShowCreate] = useState(false)
   const [previewId, setPreviewId] = useState<string | null>(null)
+
+  // ✅ يزامن التحديد المحلي مع أي رابط خارجي يوصل بـ ?courseId=... (مثلاً
+  // زر "إدارة الحصة" بلوحة تحكم المدرّس)، حتى لو الصفحة كانت مفتوحة أصلاً
+  useEffect(() => {
+    if (courseIdFromQuery) setSelectedId(courseIdFromQuery)
+  }, [courseIdFromQuery])
+
   const handleSelect = (courseId: string) => {
     setSelectedId(prev => (prev === courseId ? null : courseId))
+    // اختيار يدوي من القائمة يُلغي أي تبويب/كورس مفروض جاي من رابط خارجي
+    if (searchParams.toString()) setSearchParams({}, { replace: true })
   }
 
   const handleDeleted = () => {
     setSelectedId(null)
+    setSearchParams({}, { replace: true })
     refetch()
   }
 
@@ -40,7 +55,13 @@ export default function CourseBuilder() {
         />)}
 
       {selectedId && (
-        <CourseDetailPanel courseId={selectedId} onChanged={refetch} onDeleted={handleDeleted} />
+        <CourseDetailPanel
+          key={`${selectedId}:${tabFromQuery || ''}`}
+          courseId={selectedId}
+          initialTab={tabFromQuery || undefined}
+          onChanged={refetch}
+          onDeleted={handleDeleted}
+        />
       )}
 
       {showCreate && (

@@ -31,7 +31,13 @@ const publicAuthEndpoints = [
   '/auth/resend-verification',
   '/auth/google',
   '/auth/google/callback',
+  '/auth/google/link/confirm',
+  '/auth/google/register/confirm',
+  '/auth/google/guardian-email',
   '/auth/guardian/approve',
+  '/auth/guardian/manage',
+  '/auth/guardian/manage/resend',
+  '/auth/guardian/manage/update-email',
 ]
 
 API.interceptors.response.use(

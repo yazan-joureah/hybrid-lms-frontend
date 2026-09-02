@@ -17,14 +17,15 @@ import { useAttendance } from '../../../hooks/live/useAttendance'
 
 interface Props {
     courseId: string
+    initialTab?: TabKey
     onChanged: () => void
     onDeleted: () => void
 }
 
-type TabKey = 'details' | 'units' | 'quizzes' | 'peer' | 'students' | 'live' | 'attendance'
+export type TabKey = 'details' | 'units' | 'quizzes' | 'peer' | 'students' | 'live' | 'attendance'
 
-export function CourseDetailPanel({ courseId, onChanged, onDeleted }: Props) {
-    const [activeTab, setActiveTab] = useState<TabKey>('details')
+export function CourseDetailPanel({ courseId, initialTab, onChanged, onDeleted }: Props) {
+    const [activeTab, setActiveTab] = useState<TabKey>(initialTab || 'details')
 
     const courseDetail = useCourseDetail(courseId, onChanged)
     const unitsState = useCourseUnits(courseId)

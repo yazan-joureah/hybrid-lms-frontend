@@ -67,8 +67,8 @@ export default function ForgotPassword() {
       setPassError('كلمتا المرور غير متطابقتين')
       return
     }
-    if (newPass.length < 6) {
-      setPassError('كلمة المرور يجب أن تكون 6 أحرف على الأقل')
+    if (newPass.length < 15) {
+      setPassError('كلمة المرور يجب أن تكون 15 حرفاً على الأقل (وفق معايير NIST)')
       return
     }
     setPassError('')
@@ -108,7 +108,7 @@ export default function ForgotPassword() {
     }
   }
 
-  const strength = newPass.length === 0 ? 0 : newPass.length < 6 ? 1 : newPass.length < 10 ? 2 : 3
+  const strength = newPass.length === 0 ? 0 : newPass.length < 15 ? 1 : newPass.length < 20 ? 2 : 3
   const strengthColors = ['', '#ef4444', '#f59e0b', '#10b981']
   const strengthLabels = ['', 'ضعيفة', 'مقبولة', 'قوية']
 

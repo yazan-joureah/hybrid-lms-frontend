@@ -50,6 +50,11 @@ export default function Register() {
   const emailValid = EMAIL_RE.test(email)
   const minor = isMinor(dob)
 
+  // UX ONLY — الفرض الأمني الفعلي على السيرفر (registerSchema.refine).
+  // نكشف التعارض هنا لأن الدور يُختار بالخطوة 1 قبل معرفة تاريخ الميلاد
+  // بالخطوة 2، فلا يظهر التعارض إلا بعد إدخال DOB.
+  const minorInstructorConflict = minor && role === 'instructor'
+
   const strength = password.length === 0 ? 0 : password.length < 6 ? 1 : password.length < 10 ? 2 : password.match(/[A-Z]/) && password.match(/[0-9]/) ? 4 : 3
 
   const strengthLabels = ['', 'ضعيفة', 'مقبولة', 'جيدة', 'قوية جداً']
@@ -62,6 +67,10 @@ export default function Register() {
     }
     if (minor && !guardianEmail.trim()) {
       setError('بما أنك دون 18 عاماً، لازم تدخل بريد ولي الأمر')
+      return
+    }
+    if (minorInstructorConflict) {
+      setError('لا يمكن للقاصر (دون 18 عاماً) التسجيل كأستاذ — يرجى التبديل إلى "طالب".')
       return
     }
 
@@ -283,6 +292,24 @@ export default function Register() {
                 <input className="form-input" type="date" value={dob} onChange={e => setDob(e.target.value)} />
               </div>
 
+              {minorInstructorConflict && (
+                <div style={{
+                  background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
+                  borderRadius: 10, padding: '12px 14px', fontSize: 12.5, color: '#f87171',
+                  marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 8,
+                }}>
+                  <span>لا يمكن التسجيل كأستاذ إذا كان عمرك أقل من 18 عاماً.</span>
+                  <button
+                    type="button"
+                    className="btn-outline"
+                    style={{ alignSelf: 'flex-start', padding: '6px 14px', fontSize: 12.5, borderColor: '#f87171', color: '#f87171' }}
+                    onClick={() => setRole('student')}
+                  >
+                    التبديل إلى "طالب"
+                  </button>
+                </div>
+              )}
+
               {minor && (
                 <div style={{ marginBottom: 16 }}>
                   <label className="form-label">بريد ولي الأمر الإلكتروني</label>
@@ -301,14 +328,19 @@ export default function Register() {
                   ⚠️ {error}
                 </div>
               )}
-
+              <p style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.4)', textAlign: 'center', margin: '0 0 14px' }}>
+                بإنشائك الحساب، أنت توافق على{' '}
+                <button className="btn-ghost" style={{ fontSize: 11.5, padding: 0, color: '#a855f7', display: 'inline' }} onClick={() => navigate('privacy-policy')}>
+                  سياسة الخصوصية
+                </button>
+              </p>
               <div style={{ display: 'flex', gap: 10, marginBottom: 4 }}>
                 <button className="btn-outline" style={{ flex: '0 0 auto', padding: '12px 20px', fontSize: 14 }} onClick={() => setStep(1)}>← رجوع</button>
                 <button
                   className="btn-primary"
                   style={{ flex: 1, justifyContent: 'center', padding: '13px', fontSize: 15 }}
                   onClick={handleRegister}
-                  disabled={loading}
+                  disabled={loading || minorInstructorConflict}
                 >{loading ? '...جارٍ إنشاء الحساب' : 'إنشاء الحساب'}</button>
               </div>
 

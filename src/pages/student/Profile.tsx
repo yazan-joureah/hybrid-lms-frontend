@@ -2,6 +2,11 @@ import { useState, useEffect, useRef, type ChangeEvent } from 'react'
 import { useNav } from '../../context/NavContext'
 import { useAuthApi } from '../../context/AuthApiContext'
 import { StudentPaymentsPanel } from '../payments/student/StudentPaymentsPanel'
+import { ModalPortal } from '../../components/common/ModalPortal'
+import OtpInput from '../../components/common/OtpInput'
+import { userService } from '../../services/userService'
+import { kycService } from '../../services/kycService'
+import { BackupCodesModal } from '../../components/common/BackupCodesModal'
 
 type BackendRole = 'Student' | 'Instructor' | 'Admin' | 'Superadmin'
 
@@ -15,9 +20,19 @@ const KYC_ERROR_MESSAGES: Record<string, string> = {
   INVALID_FILE: 'صيغة أو حجم أحد الملفين غير مقبول.',
 }
 
+const AGE_CORRECTION_ERROR_MESSAGES: Record<string, string> = {
+  NOT_AGE_FLAGGED: 'هذا الإجراء غير متاح لحالتك الحالية.',
+  CORRECTION_ALREADY_PENDING: 'لديك طلب تصحيح عمر قيد المراجعة من ولي الأمر بالفعل.',
+  GUARDIAN_EMAIL_SAME_AS_STUDENT: 'يجب أن يكون بريد ولي الأمر مختلفاً عن بريدك.',
+  ACCOUNT_NOT_ACTIVE: 'حسابك غير نشط حالياً.',
+}
+
 export default function Profile() {
-  const { userName, setUserName, userEmail, setUserEmail, userPhone, setUserPhone, userDob, setUserDob, userBio, setUserBio, userGender, setUserGender } = useNav()
-  const { getCurrentUser, setupMfa, confirmMfa, getErrorMessage, uploadProfilePicture, getProfilePictureUrl, submitKyc } = useAuthApi()
+  const { userName, setUserName, userEmail, setUserEmail, userPhone, setUserPhone, userDob, setUserDob, userBio, setUserBio, userGender, setUserGender, logout, navigate } = useNav()
+  const {
+    getCurrentUser, setupMfa, confirmMfa, getErrorMessage, uploadProfilePicture, getProfilePictureUrl, submitKyc,
+    updateProfile, forgotPassword, resetPassword, requestAccountDeletion,
+  } = useAuthApi()
 
   const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'verification' | 'billing'>(
     () => (sessionStorage.getItem('profile_initial_tab') as any) || 'profile'
@@ -34,6 +49,8 @@ export default function Profile() {
   const [bio, setBio] = useState(userBio || '')
   const [gender, setGender] = useState<'male' | 'female'>(userGender || 'male')
   const [saved, setSaved] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   const [userId, setUserId] = useState<string | null>(null)
@@ -42,9 +59,9 @@ export default function Profile() {
   const [mfaEnabled, setMfaEnabled] = useState<boolean | null>(null)
   const [profileLoading, setProfileLoading] = useState(true)
 
-  // رفع الصورة — حقيقي هلق
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null) // معاينة فورية أثناء الرفع
-  const [avatarBust, setAvatarBust] = useState(0) // لتجديد الصورة من السيرفر بعد الرفع (تجاوز الكاش)
+  // رفع الصورة
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
+  const [avatarBust, setAvatarBust] = useState(0)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [avatarError, setAvatarError] = useState('')
 
@@ -54,12 +71,43 @@ export default function Profile() {
   const [totpCode, setTotpCode] = useState('')
   const [backupCodes, setBackupCodes] = useState<string[] | null>(null)
 
-  // ---------- KYC (تبويب التحقق) ----------
+  // KYC
   const [idDocumentType, setIdDocumentType] = useState<'national_id' | 'passport'>('national_id')
   const [idFile, setIdFile] = useState<File | null>(null)
   const [selfieFile, setSelfieFile] = useState<File | null>(null)
   const [kycLoading, setKycLoading] = useState(false)
   const [kycError, setKycError] = useState('')
+
+  // تصحيح العمر بعد age_flagged
+  const [correctionBirthDate, setCorrectionBirthDate] = useState('')
+  const [correctionGuardianEmail, setCorrectionGuardianEmail] = useState('')
+  const [correctionLoading, setCorrectionLoading] = useState(false)
+  const [correctionError, setCorrectionError] = useState('')
+  const [correctionSent, setCorrectionSent] = useState(false)
+
+  // ---------- حفظ الملف الشخصي (حقيقي الآن — PATCH /users/me) ----------
+  const [savingProfile, setSavingProfile] = useState(false)
+  const [profileSaveError, setProfileSaveError] = useState('')
+
+  // ---------- تغيير كلمة المرور (عبر OTP بما إنه لا يوجد endpoint مباشر) ----------
+  type PwStep = 'idle' | 'otp' | 'newpass'
+  const [pwStep, setPwStep] = useState<PwStep>('idle')
+  const [pwCode, setPwCode] = useState('')
+  const [pwOtpKey, setPwOtpKey] = useState(0)
+  const [pwNewPass, setPwNewPass] = useState('')
+  const [pwConfirmPass, setPwConfirmPass] = useState('')
+  const [pwError, setPwError] = useState('')
+  const [pwLoading, setPwLoading] = useState(false)
+  const [pwCooldown, setPwCooldown] = useState(0)
+  const [pwSuccess, setPwSuccess] = useState(false)
+
+  // ---------- حذف/إغلاق الحساب (DELETE /auth/account) ----------
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+  const [deleteReason, setDeleteReason] = useState('')
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  const [deleteLoading, setDeleteLoading] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
+  const [deleteResult, setDeleteResult] = useState<{ immediate: boolean; status: string } | null>(null)
 
   useEffect(() => {
     setName(userName || 'أحمد محمد الأحمد')
@@ -71,11 +119,12 @@ export default function Profile() {
   }, [userName, userEmail, userPhone, userDob, userBio, userGender])
 
   const loadUser = () => {
-    return getCurrentUser().then((u) => {
+    return userService.getMe().then((u) => {
       setUserId(u.id || null)
       setBackendRole((u.role as BackendRole) || 'Student')
       setKycStatus(u.kyc_status || 'not_submitted')
       setMfaEnabled(!!u.mfa_enabled)
+      if (u.birth_date) setUserDob(String(u.birth_date).slice(0, 10))
     })
   }
 
@@ -98,17 +147,31 @@ export default function Profile() {
   const isInstructor = backendRole === 'Instructor'
   const mfaMandatory = isInstructor
 
-  const handleSave = () => {
-    setUserName(name)
-    setUserEmail(email)
-    setUserPhone(phone)
-    setUserDob(dob)
-    setUserBio(bio)
-    setUserGender(gender)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
-    // ⚠️ باقي حقول الملف (phone/dob/bio/gender) لسا ما إلها endpoint تحديث
-    // مؤكد بالباك — هاي بس بتحدّث الـ NavContext المحلي، مو السيرفر.
+  // ---------- حفظ الملف الشخصي (PATCH /users/me) ----------
+  const handleSave = async () => {
+    setProfileSaveError('')
+    setSavingProfile(true)
+    try {
+      const updated = await updateProfile({
+        full_name: name.trim(),
+        phone: phone.trim() || undefined,
+        bio: bio.trim() || undefined,
+        // تاريخ الميلاد مقفول سيرفريًا بعد التحقق (KYC) — لا نرسله أصلاً بهالحالة
+        birth_date: kycStatus !== 'verified' && dob ? new Date(dob).toISOString() : undefined,
+      })
+      setUserName(updated.full_name || name)
+      setUserEmail(updated.email || email)
+      if (updated.phone !== undefined) setUserPhone(updated.phone || '')
+      if (updated.bio !== undefined) setUserBio(updated.bio || '')
+      if (updated.birth_date) setUserDob(new Date(updated.birth_date).toISOString().slice(0, 10))
+      setUserGender(gender) // ⚠️ الجندر UI محلي فقط — لا يوجد حقل جندر بموديل User بالباك
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2500)
+    } catch (err) {
+      setProfileSaveError(getErrorMessage(err))
+    } finally {
+      setSavingProfile(false)
+    }
   }
 
   // ---------- رفع صورة حقيقي ----------
@@ -117,17 +180,16 @@ export default function Profile() {
     if (!file) return
     setAvatarError('')
 
-    // معاينة فورية بينما الرفع شغّال
     const localUrl = URL.createObjectURL(file)
     setAvatarPreview(localUrl)
 
     setUploadingAvatar(true)
     try {
-      await uploadProfilePicture(file)
-      setAvatarBust((n) => n + 1) // إجبار إعادة تحميل الصورة الحقيقية من السيرفر
+      await userService.uploadProfilePicture(file)
+      setAvatarBust((n) => n + 1)
     } catch (err) {
       setAvatarError(getErrorMessage(err))
-      setAvatarPreview(null) // رجوع للأفتار الافتراضي لو فشل الرفع
+      setAvatarPreview(null)
     } finally {
       setUploadingAvatar(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
@@ -139,10 +201,10 @@ export default function Profile() {
   const avatarSrc = avatarPreview
     ? avatarPreview
     : userId
-      ? `${getProfilePictureUrl(userId)}?v=${avatarBust}`
+      ? `${userService.getProfilePictureUrl(userId)}?v=${avatarBust}`
       : null
 
-  // ---------- MFA (زي ما هي) ----------
+  // ---------- MFA ----------
   const handleStartTotpSetup = async () => {
     setMfaError('')
     setMfaActionLoading(true)
@@ -196,8 +258,8 @@ export default function Profile() {
     setKycError('')
     setKycLoading(true)
     try {
-      await submitKyc({ idDocumentType, idDocumentFile: idFile, selfieFile })
-      await loadUser() // تحديث kycStatus الحقيقي (رح يصير review_pending)
+      await kycService.submitMyRequest({ idDocumentType, idDocumentFile: idFile, selfieFile })
+      await loadUser()
       setIdFile(null)
       setSelfieFile(null)
     } catch (err: any) {
@@ -205,6 +267,101 @@ export default function Profile() {
       setKycError(KYC_ERROR_MESSAGES[code] || getErrorMessage(err))
     } finally {
       setKycLoading(false)
+    }
+  }
+
+  // ---------- تصحيح العمر بعد age_flagged ----------
+  const handleAgeCorrectionSubmit = async () => {
+    if (!correctionBirthDate) { setCorrectionError('أدخل تاريخ الميلاد الصحيح.'); return }
+    if (!correctionGuardianEmail.trim()) { setCorrectionError('أدخل بريد ولي الأمر.'); return }
+    setCorrectionError('')
+    setCorrectionLoading(true)
+    try {
+      await kycService.requestAgeCorrection(correctionBirthDate, correctionGuardianEmail.trim())
+      setCorrectionSent(true)
+    } catch (err: any) {
+      const code = err?.response?.data?.error?.code
+      setCorrectionError(AGE_CORRECTION_ERROR_MESSAGES[code] || getErrorMessage(err))
+    } finally {
+      setCorrectionLoading(false)
+    }
+  }
+
+  // ---------- تغيير كلمة المرور ----------
+  const startPwCooldown = () => {
+    setPwCooldown(60)
+    const iv = setInterval(() => {
+      setPwCooldown(prev => {
+        if (prev <= 1) { clearInterval(iv); return 0 }
+        return prev - 1
+      })
+    }, 1000)
+  }
+
+  const resetPasswordChangeFlow = () => {
+    setPwStep('idle'); setPwCode(''); setPwOtpKey(k => k + 1)
+    setPwNewPass(''); setPwConfirmPass(''); setPwError(''); setPwCooldown(0)
+  }
+
+  const handleStartPasswordChange = async () => {
+    setPwError('')
+    setPwLoading(true)
+    try {
+      await forgotPassword(email.trim().toLowerCase())
+      setPwStep('otp')
+      setPwCode('')
+      setPwOtpKey(k => k + 1)
+      startPwCooldown()
+    } catch (err) {
+      setPwError(getErrorMessage(err))
+    } finally {
+      setPwLoading(false)
+    }
+  }
+
+  const handleConfirmPwOtp = () => {
+    if (pwCode.length !== 6) { setPwError('أدخل الرمز المكوّن من 6 أرقام كاملاً'); return }
+    setPwError('')
+    setPwStep('newpass')
+  }
+
+  const handleFinishPasswordChange = async () => {
+    if (pwNewPass.length < 15) { setPwError('كلمة المرور يجب أن تكون 15 حرفاً على الأقل (وفق معايير NIST SP 800-63-4)'); return }
+    if (pwNewPass !== pwConfirmPass) { setPwError('كلمتا المرور غير متطابقتين'); return }
+    setPwError('')
+    setPwLoading(true)
+    try {
+      await resetPassword(email.trim().toLowerCase(), pwCode, pwNewPass)
+      setPwSuccess(true)
+      setPwStep('idle')
+      // ⚠️ الباك يسحب كل الجلسات عند نجاح reset-password (session.service.js)
+      // فلازم تسجيل خروج محلي فوري حتى ما يبقى المستخدم بحالة جلسة ميتة.
+      setTimeout(() => { void logout() }, 2500)
+    } catch (err: any) {
+      const code = err?.response?.data?.error?.code
+      if (code === 'INVALID_CODE' || code === 'CODE_EXPIRED' || code === 'TOO_MANY_ATTEMPTS') {
+        setPwStep('otp'); setPwCode(''); setPwOtpKey(k => k + 1)
+      }
+      setPwError(getErrorMessage(err))
+    } finally {
+      setPwLoading(false)
+    }
+  }
+
+  // ---------- حذف/إغلاق الحساب ----------
+  const handleConfirmDeleteAccount = async () => {
+    setDeleteError('')
+    setDeleteLoading(true)
+    try {
+      const result = await requestAccountDeletion(deleteReason)
+      setDeleteResult(result)
+      if (result.immediate) {
+        setTimeout(() => { void logout(); navigate('landing') }, 2200)
+      }
+    } catch (err) {
+      setDeleteError(getErrorMessage(err))
+    } finally {
+      setDeleteLoading(false)
     }
   }
 
@@ -297,18 +454,29 @@ export default function Profile() {
                 </div>
                 <div>
                   <label className="form-label">تاريخ الميلاد</label>
-                  <input className="form-input" type="date" value={dob} onChange={e => setDob(e.target.value)} />
+                  <input
+                    className="form-input" type="date" value={dob}
+                    onChange={e => setDob(e.target.value)}
+                    disabled={kycStatus === 'verified'}
+                    title={kycStatus === 'verified' ? 'مقفول بعد التحقق من الهوية (KYC)' : undefined}
+                  />
+                  {kycStatus === 'verified' && (
+                    <div style={{ fontSize: 11, color: '#fbbf24', marginTop: 4 }}>🔒 مقفول بعد التحقق من الهوية</div>
+                  )}
                 </div>
               </div>
               <div style={{ marginBottom: 20 }}>
                 <label className="form-label">نبذة شخصية</label>
                 <textarea className="form-input" rows={3} value={bio} onChange={e => setBio(e.target.value)} placeholder="أنا طالب أحب تعلم تطوير الويب" style={{ resize: 'none' }} />
               </div>
-              <button className="btn-primary" style={{ padding: '11px 28px', fontSize: 14 }} onClick={handleSave}>
-                {saved ? '✓ تم الحفظ' : 'حفظ التغييرات'}
+              {profileSaveError && (
+                <div style={{ color: '#f87171', fontSize: 13, marginBottom: 12 }}>⚠️ {profileSaveError}</div>
+              )}
+              <button className="btn-primary" style={{ padding: '11px 28px', fontSize: 14 }} onClick={handleSave} disabled={savingProfile}>
+                {savingProfile ? '...جارٍ الحفظ' : saved ? '✓ تم الحفظ' : 'حفظ التغييرات'}
               </button>
               <p style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.35)', marginTop: 10 }}>
-                ⚠️ حفظ رقم الهاتف/تاريخ الميلاد/النبذة محلي حاليًا فقط — بانتظار endpoint تحديث ملف شخصي من الباك.
+                ℹ️ الجنس عرض محلي فقط للواجهة (لا يوجد حقل مقابل بالحساب)، وباقي الحقول تُحفظ على السيرفر فعليًا.
               </p>
             </div>
           )}
@@ -316,13 +484,65 @@ export default function Profile() {
           {activeTab === 'security' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
               <div style={{ background: 'var(--bg-card)', backdropFilter: 'blur(20px)', border: '1px solid var(--border)', borderRadius: 18, padding: '24px' }}>
-                <h3 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 18px' }}>🔑 تغيير كلمة المرور</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 400 }}>
-                  <div><label className="form-label">كلمة المرور الحالية</label><input className="form-input" type="password" placeholder="••••••••" /></div>
-                  <div><label className="form-label">كلمة المرور الجديدة</label><input className="form-input" type="password" placeholder="••••••••" /></div>
-                  <div><label className="form-label">تأكيد كلمة المرور</label><input className="form-input" type="password" placeholder="••••••••" /></div>
-                  <button className="btn-primary" style={{ padding: '11px 24px', fontSize: 14, width: 'fit-content' }} disabled>تحديث كلمة المرور (قيد الإنجاز)</button>
-                </div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 6px' }}>🔑 تغيير كلمة المرور</h3>
+
+                {pwStep === 'idle' && !pwSuccess && (
+                  <>
+                    <p style={{ color: 'var(--text-muted)', fontSize: 13.5, margin: '0 0 16px' }}>
+                      سنرسل رمز تحقق من 6 أرقام إلى بريدك <strong style={{ color: '#c4b5fd' }}>{email}</strong> لتأكيد هويتك قبل تعيين كلمة مرور جديدة.
+                    </p>
+                    {pwError && <div style={{ color: '#f87171', fontSize: 13, marginBottom: 14 }}>⚠️ {pwError}</div>}
+                    <button className="btn-primary" style={{ padding: '11px 24px', fontSize: 14 }} disabled={pwLoading} onClick={handleStartPasswordChange}>
+                      {pwLoading ? '...جارٍ الإرسال' : 'إرسال رمز التحقق'}
+                    </button>
+                  </>
+                )}
+
+                {pwStep === 'otp' && (
+                  <div style={{ maxWidth: 380 }}>
+                    <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 14 }}>أدخل الرمز المرسل إلى بريدك</p>
+                    <div style={{ marginBottom: 10 }}>
+                      <OtpInput key={pwOtpKey} onComplete={setPwCode} error={!!pwError} disabled={pwLoading} />
+                    </div>
+                    {pwError && <div style={{ textAlign: 'center', color: '#f87171', fontSize: 13, margin: '4px 0 10px' }}>{pwError}</div>}
+                    <div style={{ textAlign: 'center', margin: '10px 0 18px', fontSize: 13, color: 'rgba(255,255,255,0.5)' }}>
+                      {pwCooldown > 0
+                        ? <>يمكن إعادة الإرسال خلال <span style={{ color: '#a855f7', fontWeight: 600 }}>{pwCooldown}s</span></>
+                        : <button className="btn-ghost" style={{ fontSize: 13, color: '#a855f7', padding: '4px 8px' }} onClick={handleStartPasswordChange} disabled={pwLoading}>إعادة إرسال الرمز</button>}
+                    </div>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      <button className="btn-primary" onClick={handleConfirmPwOtp} disabled={pwCode.length !== 6}>تحقق ومتابعة</button>
+                      <button className="btn-outline" onClick={resetPasswordChangeFlow}>إلغاء</button>
+                    </div>
+                  </div>
+                )}
+
+                {pwStep === 'newpass' && (
+                  <div style={{ maxWidth: 380 }}>
+                    <div style={{ marginBottom: 14 }}>
+                      <label className="form-label">كلمة المرور الجديدة</label>
+                      <input className="form-input" type="password" placeholder="••••••••" value={pwNewPass} onChange={e => setPwNewPass(e.target.value)} disabled={pwLoading} />
+                    </div>
+                    <div style={{ marginBottom: 14 }}>
+                      <label className="form-label">تأكيد كلمة المرور</label>
+                      <input className="form-input" type="password" placeholder="••••••••" value={pwConfirmPass} onChange={e => setPwConfirmPass(e.target.value)} disabled={pwLoading} />
+                    </div>
+                    {pwError && <div style={{ color: '#f87171', fontSize: 13, marginBottom: 14 }}>⚠️ {pwError}</div>}
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      <button className="btn-primary" disabled={pwLoading} onClick={handleFinishPasswordChange}>
+                        {pwLoading ? '...جارٍ الحفظ' : 'حفظ كلمة المرور الجديدة'}
+                      </button>
+                      <button className="btn-outline" onClick={resetPasswordChangeFlow} disabled={pwLoading}>إلغاء</button>
+                    </div>
+                  </div>
+                )}
+
+                {pwSuccess && (
+                  <div style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 10, padding: 16 }}>
+                    <p style={{ color: '#34d399', fontWeight: 600, marginBottom: 6, fontSize: 13.5 }}>✅ تم تغيير كلمة المرور بنجاح</p>
+                    <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>لأسباب أمنية تم تسجيل الخروج من كل الأجهزة — سيتم تحويلك الآن...</p>
+                  </div>
+                )}
               </div>
 
               <div style={{ background: 'var(--bg-card)', backdropFilter: 'blur(20px)', border: '1px solid var(--border)', borderRadius: 18, padding: '24px' }}>
@@ -377,13 +597,25 @@ export default function Profile() {
                 )}
 
                 {backupCodes && (
-                  <div style={{ marginTop: 14, padding: '14px', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 12 }}>
-                    <div style={{ fontSize: 13.5, color: '#fbbf24', fontWeight: 700, marginBottom: 8 }}>✓ تم التفعيل! احتفظ برموز الاسترجاع هاي بمكان آمن</div>
-                    <div style={{ fontFamily: 'monospace', fontSize: 13, color: '#fff', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 10 }}>
-                      {backupCodes.map((c) => <span key={c}>{c}</span>)}
-                    </div>
-                    <button className="btn-secondary" onClick={() => setBackupCodes(null)}>فهمت، إخفاء</button>
-                  </div>
+                  <BackupCodesModal codes={backupCodes} onDismiss={() => setBackupCodes(null)} />
+                )}
+              </div>
+
+              {/* ---------- منطقة الخطر: حذف/إغلاق الحساب ---------- */}
+              <div style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 18, padding: '24px' }}>
+                <h3 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 8px', color: '#f87171' }}>⚠️ منطقة الخطر</h3>
+                <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
+                  {isStudent && 'حذف حسابك كطالب يتم فوراً. تأكد من عدم وجود تسجيلات نشطة قبل المتابعة — يمكنك استرجاع الحساب خلال 30 يوماً فقط.'}
+                  {isInstructor && 'حذف حساب المدرّس يتطلب مراجعة وموافقة الإدارة، ولن يُقبل الطلب إذا كان لديك كورسات غير مؤرشفة.'}
+                  {!isStudent && !isInstructor && 'لا يمكن حذف حسابات الإدارة من هذه الصفحة.'}
+                </p>
+                {(isStudent || isInstructor) && (
+                  <button
+                    onClick={() => { setDeleteModalOpen(true); setDeleteError(''); setDeleteResult(null); setDeleteReason(''); setDeleteConfirmText('') }}
+                    style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: 9999, padding: '10px 22px', color: '#f87171', fontSize: 13.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+                  >
+                    🗑 حذف حسابي
+                  </button>
                 )}
               </div>
             </div>
@@ -403,7 +635,37 @@ export default function Profile() {
                 <p style={{ color: 'rgba(255,255,255,0.6)' }}>⏳ طلبك قيد المراجعة من فريق الإدارة، عادة خلال 1-3 أيام عمل.</p>
               )}
               {kycStatus === 'age_flagged' && (
-                <p style={{ color: '#f87171' }}>⚠️ تم تعليق حسابك تلقائيًا بسبب تعارض بالعمر بين بيانات حسابك والوثيقة. تواصل مع الدعم.</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 480 }}>
+                  <p style={{ color: '#f87171', fontSize: 13.5 }}>
+                    ⚠️ تم تعليق التحقق من هويتك بسبب تعارض في العمر بين بيانات حسابك ووثيقتك.
+                    لإعادة المحاولة، صحّح تاريخ ميلادك أدناه — ستحتاج موافقة ولي أمر لإتمام التصحيح،
+                    وسيُقفل الدخول إلى حسابك مؤقتاً حتى موافقته.
+                  </p>
+
+                  {correctionSent ? (
+                    <div style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 10, padding: 16 }}>
+                      <p style={{ color: '#34d399', fontWeight: 600, marginBottom: 6 }}>✅ تم إرسال طلب الموافقة لولي الأمر</p>
+                      <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13 }}>
+                        بانتظار موافقته لإعادة فتح إمكانية رفع طلب التوثيق من جديد. سيتم تسجيل خروجك تلقائياً بجلستك القادمة لحين الموافقة.
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <div>
+                        <label className="form-label">تاريخ الميلاد الصحيح</label>
+                        <input className="form-input" type="date" value={correctionBirthDate} onChange={e => setCorrectionBirthDate(e.target.value)} />
+                      </div>
+                      <div>
+                        <label className="form-label">بريد ولي الأمر الإلكتروني</label>
+                        <input className="form-input" type="email" placeholder="parent@example.com" value={correctionGuardianEmail} onChange={e => setCorrectionGuardianEmail(e.target.value)} />
+                      </div>
+                      {correctionError && <div style={{ color: '#f87171', fontSize: 13 }}>⚠️ {correctionError}</div>}
+                      <button className="btn-primary" style={{ width: 'fit-content' }} onClick={handleAgeCorrectionSubmit} disabled={correctionLoading}>
+                        {correctionLoading ? '...جارٍ الإرسال' : 'إرسال طلب التصحيح'}
+                      </button>
+                    </>
+                  )}
+                </div>
               )}
               {(kycStatus === 'rejected' || kycStatus === 'not_submitted' || !kycStatus) && isInstructor && !mfaEnabled && (
                 <div style={{ padding: 14, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, marginBottom: 16 }}>
@@ -453,6 +715,64 @@ export default function Profile() {
           )}
         </div>
       </div>
+
+      {deleteModalOpen && (
+        <ModalPortal>
+          <div
+            onClick={() => !deleteLoading && setDeleteModalOpen(false)}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, backdropFilter: 'blur(4px)' }}
+          >
+            <div onClick={e => e.stopPropagation()} style={{ background: 'rgba(12,4,45,0.98)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 20, padding: 26, maxWidth: 440, width: '100%' }}>
+              {!deleteResult ? (
+                <>
+                  <h3 style={{ marginTop: 0, color: '#f87171' }}>⚠️ تأكيد حذف الحساب</h3>
+                  <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', lineHeight: 1.7, marginBottom: 16 }}>
+                    {isStudent
+                      ? 'هذا الإجراء سيحذف حسابك فوراً. يمكنك استرجاعه خلال 30 يوماً من صفحة استرجاع الحساب فقط.'
+                      : 'سيتم إرسال طلب حذف حسابك للإدارة للمراجعة، ولن يُحذف الحساب فوراً.'}
+                  </p>
+                  <div style={{ marginBottom: 14 }}>
+                    <label className="form-label">سبب الحذف {isInstructor ? '(مطلوب لمراجعة الإدارة)' : '(اختياري)'}</label>
+                    <textarea className="form-input" rows={3} value={deleteReason} onChange={e => setDeleteReason(e.target.value)} placeholder="اشرح باختصار سبب رغبتك بحذف الحساب..." disabled={deleteLoading} />
+                  </div>
+                  <div style={{ marginBottom: 18 }}>
+                    <label className="form-label">اكتب <strong style={{ color: '#f87171' }}>حذف</strong> للتأكيد</label>
+                    <input className="form-input" value={deleteConfirmText} onChange={e => setDeleteConfirmText(e.target.value)} disabled={deleteLoading} />
+                  </div>
+                  {deleteError && <div style={{ color: '#f87171', fontSize: 13, marginBottom: 14 }}>⚠️ {deleteError}</div>}
+                  <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                    <button className="btn-outline" onClick={() => setDeleteModalOpen(false)} disabled={deleteLoading}>إلغاء</button>
+                    <button
+                      disabled={deleteLoading || deleteConfirmText.trim() !== 'حذف' || (isInstructor && !deleteReason.trim())}
+                      onClick={handleConfirmDeleteAccount}
+                      style={{
+                        background: 'linear-gradient(135deg, #ef4444, #dc2626)', border: 'none', borderRadius: 9999,
+                        padding: '10px 22px', color: '#fff', fontSize: 13.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                        opacity: (deleteLoading || deleteConfirmText.trim() !== 'حذف' || (isInstructor && !deleteReason.trim())) ? 0.5 : 1,
+                      }}
+                    >
+                      {deleteLoading ? '...جارٍ الإرسال' : 'تأكيد الحذف'}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div style={{ textAlign: 'center', padding: '10px 0' }}>
+                  <div style={{ fontSize: 40, marginBottom: 12 }}>{deleteResult.immediate ? '✅' : '📨'}</div>
+                  <h3 style={{ marginBottom: 8 }}>{deleteResult.immediate ? 'تم حذف حسابك' : 'تم إرسال طلب الحذف'}</h3>
+                  <p style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.6)', marginBottom: 20 }}>
+                    {deleteResult.immediate
+                      ? 'سيتم تسجيل خروجك الآن. يمكنك استرجاع حسابك خلال 30 يوماً إن غيّرت رأيك.'
+                      : 'طلبك الآن قيد مراجعة الإدارة. حسابك يبقى نشطاً حتى صدور القرار.'}
+                  </p>
+                  {deleteResult.immediate
+                    ? <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12.5 }}>...جارٍ تسجيل الخروج</div>
+                    : <button className="btn-primary" onClick={() => setDeleteModalOpen(false)}>حسناً</button>}
+                </div>
+              )}
+            </div>
+          </div>
+        </ModalPortal>
+      )}
     </div>
   )
 }

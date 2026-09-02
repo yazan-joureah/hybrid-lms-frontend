@@ -1,17 +1,20 @@
 // src/App.tsx
 import { useState, useCallback, useEffect, type ReactElement } from 'react'
 import { Routes, Route, Navigate, useNavigate, useLocation, useParams, useSearchParams } from 'react-router-dom'
-import { NavContext, type Role, type Page } from './context/NavContext'
+import { NavContext, type Role, type Page, GUARDIAN_MANAGE_TOKEN_KEY } from './context/NavContext'
 import { AuthApiProvider, useAuthApi, normalizeRole, computeFallbackPage, type BackendUser } from './context/AuthApiContext'
 import Layout from './components/Layout'
 import GuestLayout from './components/GuestLayout'
 import VerifyCertificate from './pages/VerifyCertificate'
+import AdminActivateAccount from './pages/admin/AdminActivateAccount'
 import { PAGE_TO_PATH, PATH_TO_PAGE } from './routes/pageRoutes'
 
 import Landing from './pages/Landing'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import ForgotPassword from './pages/ForgotPassword'
+import GuardianManage from './pages/GuardianManage'
+import GuardianApprove from './pages/GuardianApprove'
 
 import StudentDashboard from './pages/student/Dashboard'
 import CourseCatalog from './pages/student/CourseCatalog'
@@ -32,13 +35,39 @@ import InstructorSetup from './pages/instructor/InstructorSetup'
 import CourseBuilder from './pages/instructor/CourseBuilder'
 
 import AdminDashboard from './pages/admin/AdminDashboard'
+import AdminAccounts from './pages/admin/AdminAccounts'
+import AdminSetup from './pages/admin/AdminSetup'
 import AdminRefundReview from './pages/payments/admin/AdminRefundReview'
+import PrivacyPolicy from './pages/PrivacyPolicy'
 
 // --------- Route wrappers لاستخراج params من الـ URL الحقيقي ----------
 function VerifyCertificateRoute() {
   const { certificateId } = useParams<{ certificateId: string }>()
   if (!certificateId) return <Navigate to="/" replace />
   return <VerifyCertificate certificateId={decodeURIComponent(certificateId)} />
+}
+
+function AdminActivateRoute() {
+  const [params] = useSearchParams()
+  return <AdminActivateAccount emailFromQuery={params.get('email') || ''} />
+}
+
+function GuardianManageRoute() {
+  const [params] = useSearchParams()
+  // التوكن ممكن يجي من رابط الإيميل مباشرة (?token=...) عند فتح الصفحة أول
+  // مرة، أو يكون محفوظ بـ sessionStorage لو المستخدم وصلها بعد محاولة
+  // تسجيل دخول فاشلة (GUARDIAN_PENDING) داخل التطبيق نفسه.
+  const token = params.get('token') || sessionStorage.getItem(GUARDIAN_MANAGE_TOKEN_KEY) || ''
+  return <GuardianManage token={token} />
+}
+
+function GuardianApproveRoute() {
+  const [params] = useSearchParams()
+  // بعكس GuardianManage: لا نلجأ لـ sessionStorage هنا — رابط الموافقة
+  // يصل حصراً عبر بريد ولي الأمر (?token=...)، ولا سيناريو يستدعي تمريره
+  // عبر التطبيق داخلياً كما يحصل مع GUARDIAN_PENDING عند الطالب.
+  const token = params.get('token') || ''
+  return <GuardianApprove token={token} />
 }
 
 function PaymentSuccessRoute() {
@@ -53,6 +82,18 @@ function PaymentCancelledRoute() {
 
 const instructorRestrictedPages: Page[] = [
   'instructor-dashboard', 'course-builder',
+]
+
+const adminRestrictedPages: Page[] = [
+  'admin-dashboard', 'admin-accounts', 'admin-payments', 'admin-payment-detail', 'refunds',
+]
+
+// نفس فكرة instructorRestrictedPages تماماً — لكن للطالب المُعلَّق بـ
+// age_flagged: يُسمح له فقط بالوصول لصفحة البروفايل (لإرسال طلب تصحيح
+// العمر)، وأي محاولة وصول لأي محتوى تعليمي أو دفع تُعاد لصفحة البروفايل.
+const studentRestrictedPages: Page[] = [
+  'student-dashboard', 'course-catalog', 'my-courses', 'live-class',
+  'certificates', 'ai-assistant', 'checkout',
 ]
 
 function AppShell() {
@@ -74,6 +115,11 @@ function AppShell() {
   const [mfaEnabled, setMfaEnabled] = useState(false)
 
   const instructorSetupIncomplete = role === 'instructor' && (!mfaEnabled || kycStatus !== 'verified')
+  // ← جديد: نفس الشكل تماماً — طالب بحالة age_flagged يُعامَل كحساب
+  // "مقفول جزئياً" بنفس أسلوب المدرّس غير المكتمل الإعداد، فرق واحد فقط:
+  // الوجهة المسموحة هنا هي /profile بدل /instructor/setup.
+  const studentAgeFlagged = role === 'student' && kycStatus === 'age_flagged'
+  const adminSetupIncomplete = (role === 'admin' || role === 'superadmin') && !mfaEnabled
 
   // ✅ الصفحة الحالية مشتقة من الـ URL الحقيقي، مش من state محلي
   const page: Page =
@@ -85,9 +131,14 @@ function AppShell() {
     if (r === 'instructor') {
       return instructorSetupIncomplete ? PAGE_TO_PATH['instructor-setup'] : PAGE_TO_PATH['instructor-dashboard']
     }
-    if (r === 'admin' || r === 'superadmin') return PAGE_TO_PATH['admin-dashboard']
+    if (r === 'admin' || r === 'superadmin') {
+      return adminSetupIncomplete ? PAGE_TO_PATH['admin-setup'] : PAGE_TO_PATH['admin-dashboard']
+    }
+    if (r === 'student' && studentAgeFlagged) {
+      return PAGE_TO_PATH['profile']
+    }
     return PAGE_TO_PATH['student-dashboard']
-  }, [instructorSetupIncomplete])
+  }, [instructorSetupIncomplete, adminSetupIncomplete, studentAgeFlagged])
 
   // ✅ نفس توقيع navigate(page) القديم تمامًا — كل الصفحات (~50 ملف) بتضل شغالة بدون أي تعديل
   const navigate = useCallback((target: Page) => {
@@ -95,9 +146,17 @@ function AppShell() {
       routerNavigate(PAGE_TO_PATH['instructor-setup'])
       return
     }
+    if (adminSetupIncomplete && adminRestrictedPages.includes(target)) {
+      routerNavigate(PAGE_TO_PATH['admin-setup'])
+      return
+    }
+    if (studentAgeFlagged && studentRestrictedPages.includes(target)) {
+      routerNavigate(PAGE_TO_PATH['profile'])
+      return
+    }
     const path = PAGE_TO_PATH[target as Exclude<Page, 'verify-certificate'>]
     if (path) routerNavigate(path)
-  }, [instructorSetupIncomplete, routerNavigate])
+  }, [instructorSetupIncomplete, adminSetupIncomplete, studentAgeFlagged, routerNavigate])
 
   const applyUserSnapshot = (user: BackendUser) => {
     setUserName(user.full_name || '')
@@ -182,7 +241,7 @@ function AppShell() {
     page, navigate, role, setRole, isAuthenticated, login, logout,
     userName, setUserName, userEmail, setUserEmail, userPhone, setUserPhone,
     userDob, setUserDob, userBio, setUserBio, userGender, setUserGender,
-    kycStatus, mfaEnabled, instructorSetupIncomplete, refreshUser,
+    kycStatus, mfaEnabled, instructorSetupIncomplete, adminSetupIncomplete, refreshUser,
   }
 
   if (restoring) {
@@ -196,18 +255,29 @@ function AppShell() {
   const instructorRoute = (element: ReactElement) =>
     instructorSetupIncomplete ? <Navigate to="/instructor/setup" replace /> : <Layout>{element}</Layout>
 
+  // نفس فكرة instructorRoute تماماً — يُطبَّق على كل مسارات محتوى الطالب
+  const studentRoute = (element: ReactElement) =>
+    studentAgeFlagged ? <Navigate to="/profile" replace /> : <Layout>{element}</Layout>
+
+  const adminRoute = (element: ReactElement) =>
+    adminSetupIncomplete ? <Navigate to="/admin/setup" replace /> : <Layout>{element}</Layout>
+
   return (
     <NavContext.Provider value={ctx}>
       <Routes>
         <Route path="/verify/:certificateId" element={<VerifyCertificateRoute />} />
-
+        <Route path="/admin/activate" element={<AdminActivateRoute />} />
+        <Route path="/auth/guardian/manage" element={<GuardianManageRoute />} />
+        <Route path="/auth/guardian/approve" element={<GuardianApproveRoute />} />
         {!isAuthenticated && (
           <>
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/courses" element={<GuestLayout><CourseCatalog /></GuestLayout>} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="*" element={<Navigate to="/login" replace />} />
           </>
         )}
@@ -217,20 +287,22 @@ function AppShell() {
             <Route path="/payment/success" element={<Layout><PaymentSuccessRoute /></Layout>} />
             <Route path="/payment/cancelled" element={<Layout><PaymentCancelledRoute /></Layout>} />
 
-            <Route path="/dashboard" element={<Layout><StudentDashboard /></Layout>} />
-            <Route path="/courses" element={<Layout><CourseCatalog /></Layout>} />
-            <Route path="/my-courses" element={<Layout><MyCourses /></Layout>} />
-            <Route path="/my-courses/:enrollmentId" element={<Layout><MyCourses /></Layout>} />
-            <Route path="/live" element={<Layout><LiveClass /></Layout>} />
-            <Route path="/certificates" element={<Layout><Certificates /></Layout>} />
-            <Route path="/ai-assistant" element={<Layout><AIAssistant /></Layout>} />
+            <Route path="/dashboard" element={studentRoute(<StudentDashboard />)} />
+            <Route path="/courses" element={studentRoute(<CourseCatalog />)} />
+            <Route path="/my-courses" element={studentRoute(<MyCourses />)} />
+            <Route path="/my-courses/:enrollmentId" element={studentRoute(<MyCourses />)} />
+            <Route path="/live" element={studentRoute(<LiveClass />)} />
+            <Route path="/certificates" element={studentRoute(<Certificates />)} />
+            <Route path="/ai-assistant" element={studentRoute(<AIAssistant />)} />
             <Route path="/profile" element={<Layout><StudentProfile /></Layout>} />
-            <Route path="/checkout/:enrollmentId" element={<Layout><Checkout /></Layout>} />
+            <Route path="/checkout/:enrollmentId" element={studentRoute(<Checkout />)} />
 
-            <Route path="/admin" element={<Layout><AdminDashboard /></Layout>} />
-            <Route path="/admin/payments" element={<Layout><AdminPayments /></Layout>} />
-            <Route path="/admin/payments/:paymentId" element={<Layout><AdminPaymentDetail /></Layout>} />
-            <Route path="/admin/refunds" element={<Layout><AdminRefundReview /></Layout>} />
+            <Route path="/admin/setup" element={<Layout><AdminSetup /></Layout>} />
+            <Route path="/admin" element={adminRoute(<AdminDashboard />)} />
+            <Route path="/admin/accounts" element={adminRoute(<AdminAccounts />)} />
+            <Route path="/admin/payments" element={adminRoute(<AdminPayments />)} />
+            <Route path="/admin/payments/:paymentId" element={adminRoute(<AdminPaymentDetail />)} />
+            <Route path="/admin/refunds" element={adminRoute(<AdminRefundReview />)} />
 
             <Route path="/instructor" element={instructorRoute(<InstructorDashboard />)} />
             <Route path="/instructor/setup" element={<Layout><InstructorSetup /></Layout>} />

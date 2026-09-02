@@ -1,15 +1,17 @@
+// src/context/NavContext.tsx
 import { createContext, useContext } from 'react'
 
 export type Role = 'student' | 'instructor' | 'admin' | 'superadmin'
 
 export type Page =
   | 'landing' | 'login' | 'register' | 'forgot-password' | 'verify-certificate'
+  | 'guardian-manage'
   | 'student-dashboard' | 'course-catalog' | 'my-courses'
   | 'live-class' | 'certificates' | 'ai-assistant' | 'profile'
   | 'checkout' | 'payment-success' | 'payment-cancelled'
-  | 'admin-payments' | 'admin-payment-detail'
+  | 'admin-payments' | 'admin-accounts' | 'admin-payment-detail'
   | 'instructor-dashboard' | 'instructor-setup' | 'course-builder'
-  | 'admin-dashboard' | 'refunds'
+  | 'admin-dashboard' | 'admin-setup' | 'admin-dashboard' | 'refunds' | 'privacy-policy'
 
 interface NavContextType {
   page: Page
@@ -34,6 +36,7 @@ interface NavContextType {
   kycStatus: string
   mfaEnabled: boolean
   instructorSetupIncomplete: boolean
+  adminSetupIncomplete: boolean
   refreshUser: () => Promise<void>
 }
 
@@ -60,7 +63,14 @@ export const NavContext = createContext<NavContextType>({
   kycStatus: 'not_submitted',
   mfaEnabled: false,
   instructorSetupIncomplete: false,
+  adminSetupIncomplete: false,
   refreshUser: async () => { },
 })
 
 export const useNav = () => useContext(NavContext)
+
+// مفتاح sessionStorage لتمرير التوكن من Login.tsx (بعد فشل تسجيل الدخول
+// بسبب GUARDIAN_PENDING) لصفحة GuardianManage — نفس نمط
+// CHECKOUT_ENROLLMENT_KEY / SELECTED_ENROLLMENT_KEY المستخدم بالمشروع،
+// لأن NavContext ما بيدعم route params حقيقية.
+export const GUARDIAN_MANAGE_TOKEN_KEY = 'guardian_manage_token_pending'

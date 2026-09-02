@@ -1,12 +1,13 @@
 // src/context/AuthApiContext.tsx
 //
-// هاد Context منفصل تمامًا عن NavContext — مسؤوليته الوحيدة هي التواصل
-// مع الباك (login/register/verify/reset/google...). ما بيلمس أي state تبع
-// التنقل أو بيانات المستخدم المحلية — هاي تضل مسؤولية NavContext متل ما هي.
+// هذا Context منفصل تمامًا عن NavContext — مسؤوليته الوحيدة هي التواصل
+// مع الباك (login/register/verify/reset/google...). لا يلمس أي state تابع
+// للتنقل أو بيانات المستخدم المحلية — هذه تبقى مسؤولية NavContext كما هي.
 //
 import { createContext, useContext, useState, type ReactNode } from 'react'
 import API, { BASE_URL } from '../config/api'
 import type { Page } from './NavContext'
+import { userService } from '../services/userService' // ✅ استيراد userService
 
 export interface RegisterPayload {
   full_name: string
@@ -16,6 +17,19 @@ export interface RegisterPayload {
   role: string
   guardian_email?: string
   privacy_consent_version?: string
+}
+
+export interface UpdateProfilePayload {
+  full_name?: string
+  phone?: string
+  bio?: string
+  birth_date?: string // ISO string — يُرفض بـ BIRTH_DATE_LOCKED إذا kyc_status === 'verified'
+}
+
+export interface AccountDeletionResult {
+  immediate: boolean   // true = طالب (حذف فوري) | false = مدرّس (بانتظار مراجعة SuperAdmin)
+  status: string
+  requestId?: string
 }
 
 export interface BackendUser {
@@ -35,14 +49,10 @@ function extractErrorMessage(err: any): string {
   )
 }
 
-// كود الخطأ المحدد يلي راجع من الباك — نفس القيم يلي بكود صاحبك بالضبط
-// (INVALID_CODE, CODE_EXPIRED, TOO_MANY_ATTEMPTS...) عشان نعرض رسالة دقيقة
-// بدل رسالة عامة
 function extractErrorCode(err: any): string | undefined {
   return err?.response?.data?.error?.code
 }
 
-// رسائل مترجمة مطابقة تمامًا لمنطق كود صاحبك (نفس الأكواد، نفس الحالات)
 export function getCodeErrorMessage(err: any, fallback: string): string {
   const code = extractErrorCode(err)
   if (code === 'INVALID_CODE') return 'الرمز غير صحيح، حاول مرة أخرى.'
@@ -51,14 +61,19 @@ export function getCodeErrorMessage(err: any, fallback: string): string {
   return fallback || extractErrorMessage(err)
 }
 
-// الباك (حسب كود صاحبك) بيتوقع القيمة بأحرف كبيرة بالحرف الأول: Student / Instructor
 export function mapRoleToBackend(role: string): string {
   const known: Record<string, string> = { student: 'Student', instructor: 'Instructor', admin: 'Admin', superadmin: 'Superadmin' }
   return known[role.toLowerCase()] || 'Student'
 }
 
 interface AuthApiContextType {
-  login: (email: string, password: string) => Promise<{ mfaRequired?: boolean; user?: BackendUser; redirectTo?: string }>
+  login: (email: string, password: string) => Promise<{
+    mfaRequired?: boolean
+    user?: BackendUser
+    redirectTo?: string
+    guardianPending?: boolean
+    guardianManageToken?: string
+  }>
   verifyMfa: (code: string) => Promise<{ user?: BackendUser; redirectTo?: string }>
   getCurrentUser: () => Promise<BackendUser>
   logout: () => Promise<void>
@@ -74,16 +89,33 @@ interface AuthApiContextType {
   googleRegisterConfirm: (token: string, birthDate: string, role: 'Student' | 'Instructor') => Promise<{ user?: BackendUser; requiresGuardianEmail?: boolean; guardianPendingToken?: string }>
   googleLinkConfirm: (token: string, password: string) => Promise<{ user?: BackendUser }>
   googleGuardianEmail: (token: string, guardianEmail: string) => Promise<void>
-  // جديد — استعادة الجلسة (مطلوبة بعد نجاح Google، وأيضًا عند تحميل التطبيق
-  // إذا كان session_active=true بالـ localStorage). بتعتمد على refresh_token
-  // المحفوظ بكوكي httpOnly من الباك — ما بتحتاج أي parameter.
+  // Guardian management (new)
+  guardianManageStatus: (token: string) => Promise<{
+    status: 'pending' | 'approved' | 'rejected' | 'expired'
+    guardianEmail: string
+    expiresAt: string
+    resendCount: number
+    maxResendCount: number
+  }>
+  guardianManageResend: (token: string) => Promise<{ resendCount: number }>
+  guardianManageUpdateEmail: (token: string, guardianEmail: string) => Promise<{ guardianEmail: string }>
+  // Guardian decision (المُوافقة الفعلية على الطلب — SF مختلفة عن guardianManage أعلاه)
+  guardianApprove: (params: {
+    token: string
+    decision: 'approve' | 'decline'
+    guardianFullName: string
+    relationship: 'parent' | 'guardian'
+    consent?: boolean
+  }) => Promise<{ status: 'active' | 'guardian_pending'; message: string }>
+  // استعادة الجلسة
   restoreSession: () => Promise<{ success: boolean; user?: BackendUser }>
-  // جديد — لحقن mfa_temp_token الجاي من redirect الباك (?oauth_step=mfa&token=...)
-  // بالـ state الداخلي، عشان verifyMfa() تلاقيه لما نستدعيها من صفحة /login
   setPendingMfaToken: (token: string) => void
+  // Profile & Account
   uploadProfilePicture: (file: File) => Promise<void>
   getProfilePictureUrl: (userId: string) => string
   submitKyc: (params: { idDocumentType: 'national_id' | 'passport'; idDocumentFile: File; selfieFile: File }) => Promise<void>
+  updateProfile: (payload: UpdateProfilePayload) => Promise<BackendUser>
+  requestAccountDeletion: (reason?: string) => Promise<AccountDeletionResult>
   getErrorMessage: (err: any) => string
 }
 
@@ -92,9 +124,9 @@ const AuthApiContext = createContext<AuthApiContextType | undefined>(undefined)
 export function AuthApiProvider({ children }: { children: ReactNode }) {
   const [mfaTempToken, setMfaTempToken] = useState<string | null>(null)
 
+  // ✅ استخدام userService بدلاً من API.get مباشرة
   const fetchProfile = async (): Promise<BackendUser> => {
-    const res = await API.get('/users/me')
-    return res.data?.data
+    return userService.getMe() as unknown as BackendUser
   }
 
   const getCurrentUser: AuthApiContextType['getCurrentUser'] = async () => {
@@ -122,34 +154,41 @@ export function AuthApiProvider({ children }: { children: ReactNode }) {
   }
 
   const login: AuthApiContextType['login'] = async (email, password) => {
-    const res = await API.post('/auth/login', { email, password })
-    const data = res.data?.data
+    try {
+      const res = await API.post('/auth/login', { email, password })
+      const data = res.data?.data
 
-    if (data?.mfa_required) {
-      setMfaTempToken(data.mfa_temp_token)
-      return { mfaRequired: true }
+      if (data?.mfa_required) {
+        setMfaTempToken(data.mfa_temp_token)
+        return { mfaRequired: true }
+      }
+
+      const token = data?.access_token
+      if (!token) throw new Error('لم يتم استلام رمز الدخول من الخادم')
+      const user = await setSession(token)
+      return { user, redirectTo: data?.user?.redirect_to }
+    } catch (err: any) {
+      const code = err?.response?.data?.error?.code
+      if (code === 'GUARDIAN_PENDING') {
+        // ✅ مؤكَّد من errorHandler.js: clientData بتنحط جوا "data" مش جوا "error"
+        const guardianManageToken = err?.response?.data?.data?.guardian_manage_token
+        return { guardianPending: true, guardianManageToken }
+      }
+      throw err
     }
-
-    const token = data?.access_token
-    if (!token) throw new Error('لم يتم استلام رمز الدخول من الخادم')
-    const user = await setSession(token)
-    return { user, redirectTo: data?.user?.redirect_to }   // ← نحافظ عليها بدل ما نرميها
   }
 
   const logout: AuthApiContextType['logout'] = async () => {
     try {
       await API.post('/auth/logout')
-    } catch (err) {
-      // نكمل تنظيف الفرونت حتى لو فشل الطلب (مثلاً السيرفر واقع أو التوكن منتهي أصلاً)
+    } catch {
+      // نكمل تنظيف الفرونت حتى لو فشل الطلب
     }
     localStorage.removeItem('session_active')
     delete API.defaults.headers.common.Authorization
     setMfaTempToken(null)
 
-    // ✅ تنظيف أي أثر لآخر كورس/تسجيل كان مفتوح، حتى ما يرجّع المستخدم
-    // (أو مستخدم تاني عالجهاز نفسه) تلقائياً لنفس المكان بعد تسجيل دخول جديد.
-    // sessionStorage.clear() ما بنستخدمها لأنه ممكن يكون فيها مفاتيح تانية
-    // مستقبلية لأغراض تانية — بنمسح فقط يلي يخص "آخر مكان مفتوح بالمشغّل".
+    // تنظيف أي أثر لآخر كورس/تسجيل
     try {
       sessionStorage.removeItem('selected_enrollment_id')
       const keysToRemove: string[] = []
@@ -159,30 +198,8 @@ export function AuthApiProvider({ children }: { children: ReactNode }) {
       }
       keysToRemove.forEach(key => sessionStorage.removeItem(key))
     } catch {
-      // بيئات بدون sessionStorage — نتجاهل بأمان
+      // تجاهل
     }
-  }
-
-  // ⚠️ افتراض غير مؤكد: نفس نمط الكود المرجعي القديم
-  // (PATCH /users/me/profile-picture, حقل 'image'). لازم تأكيد من
-  // userRoutes.js/user.controller.js الحالي قبل الاعتماد الكامل.
-  const uploadProfilePicture: AuthApiContextType['uploadProfilePicture'] = async (file) => {
-    const formData = new FormData()
-    formData.append('image', file)
-    await API.patch('/users/me/profile-picture', formData)
-  }
-
-  const getProfilePictureUrl: AuthApiContextType['getProfilePictureUrl'] = (userId) => {
-    return `${BASE_URL}/users/${userId}/profile-picture`
-  }
-
-  // مطابقة تمامًا لعقد kyc.controller.js/kycRoutes.js المؤكد سابقًا
-  const submitKyc: AuthApiContextType['submitKyc'] = async ({ idDocumentType, idDocumentFile, selfieFile }) => {
-    const formData = new FormData()
-    formData.append('idDocumentType', idDocumentType)
-    formData.append('id_document', idDocumentFile)
-    formData.append('selfie', selfieFile)
-    await API.post('/kyc/requests', formData)
   }
 
   const verifyMfa: AuthApiContextType['verifyMfa'] = async (code) => {
@@ -221,11 +238,6 @@ export function AuthApiProvider({ children }: { children: ReactNode }) {
   }
 
   // ---------- Google OAuth ----------
-
-  // بيوديك على صفحة Google نفسها — الباك بعدين بيرجعك عبر redirect حقيقي
-  // (مو JSON) لصفحة /login بـ query params (oauth_step/token/oauth_error)
-  // أو لصفحة /dashboard?auth=google_success. هاد التعامل صار داخل Login.tsx
-  // مباشرة، مو بصفحة منفصلة.
   const googleLogin: AuthApiContextType['googleLogin'] = () => {
     window.location.href = `${BASE_URL}/auth/google`
   }
@@ -267,15 +279,54 @@ export function AuthApiProvider({ children }: { children: ReactNode }) {
     })
   }
 
+  // ---------- Guardian management (new) ----------
+  const guardianManageStatus: AuthApiContextType['guardianManageStatus'] = async (token) => {
+    const res = await API.get('/auth/guardian/manage', { params: { token } })
+    const data = res.data?.data
+    return {
+      status: data?.status,
+      guardianEmail: data?.guardian_email,
+      expiresAt: data?.expires_at,
+      resendCount: data?.resend_count,
+      maxResendCount: data?.max_resend_count,
+    }
+  }
+
+  const guardianManageResend: AuthApiContextType['guardianManageResend'] = async (token) => {
+    const res = await API.post('/auth/guardian/manage/resend', { token })
+    return { resendCount: res.data?.data?.resend_count }
+  }
+
+  const guardianManageUpdateEmail: AuthApiContextType['guardianManageUpdateEmail'] = async (token, guardianEmail) => {
+    const res = await API.post('/auth/guardian/manage/update-email', {
+      token,
+      guardian_email: guardianEmail,
+    })
+    return { guardianEmail: res.data?.data?.guardian_email }
+  }
+
+  // ---------- Guardian decision (approve/decline the request itself) ----------
+  // SECURITY: consent يُرسَل فقط عند decision='approve' — السيرفر
+  // (guardianApproveSchema) يشترطه true حصراً في تلك الحالة، وإرساله
+  // false/undefined عند الرفض قد يُربك المخطط بلا داعٍ.
+  const guardianApprove: AuthApiContextType['guardianApprove'] = async ({
+    token, decision, guardianFullName, relationship, consent,
+  }) => {
+    const res = await API.post('/auth/guardian/approve', {
+      token,
+      decision,
+      guardian_full_name: guardianFullName,
+      relationship,
+      ...(decision === 'approve' && { consent }),
+    })
+    const data = res.data?.data
+    return { status: data?.status, message: data?.message }
+  }
+
   // ---------- استعادة الجلسة ----------
-  // بتنادى بحالتين:
-  // 1) عند تحميل التطبيق إذا localStorage['session_active'] === 'true'
-  // 2) بعد ما الباك يعمل redirect لـ /dashboard?auth=google_success
-  //    (لأنه الباك بس بيحط refresh_token بكوكي httpOnly، وما بيرجع
-  //    access_token بالـ URL — وهاد الصح أمنيًا. فلازم نطلبه إحنا يدويًا).
   const restoreSession: AuthApiContextType['restoreSession'] = async () => {
     try {
-      const res = await API.post('/auth/refresh') // refresh_token بيترسل تلقائيًا عبر الكوكي (withCredentials)
+      const res = await API.post('/auth/refresh')
       const token = res.data?.data?.access_token
       if (!token) {
         localStorage.removeItem('session_active')
@@ -283,7 +334,7 @@ export function AuthApiProvider({ children }: { children: ReactNode }) {
       }
       const user = await setSession(token)
       return { success: true, user }
-    } catch (err) {
+    } catch {
       localStorage.removeItem('session_active')
       return { success: false }
     }
@@ -291,6 +342,42 @@ export function AuthApiProvider({ children }: { children: ReactNode }) {
 
   const setPendingMfaToken: AuthApiContextType['setPendingMfaToken'] = (token) => {
     setMfaTempToken(token)
+  }
+
+  // ---------- Profile & Account ----------
+  const uploadProfilePicture: AuthApiContextType['uploadProfilePicture'] = async (file) => {
+    const formData = new FormData()
+    formData.append('profile_picture', file)
+    await API.post('/users/me/profile-picture', formData)
+  }
+
+  const getProfilePictureUrl: AuthApiContextType['getProfilePictureUrl'] = (userId) => {
+    return `${API.defaults.baseURL}/users/${userId}/profile-picture`
+  }
+
+  const submitKyc: AuthApiContextType['submitKyc'] = async ({ idDocumentType, idDocumentFile, selfieFile }) => {
+    const formData = new FormData()
+    formData.append('idDocumentType', idDocumentType)
+    formData.append('id_document', idDocumentFile)
+    formData.append('selfie', selfieFile)
+    await API.post('/kyc/requests', formData)
+  }
+
+  // ⚠️ افتراض غير مؤكد: بافترض إنه updateProfileSchema (userSchemas.js) بيقبل
+  // full_name/phone/bio/birth_date كلها اختيارية (partial update) — لازم تأكيد
+  // من محتوى userSchemas.js الفعلي لو صار عندك اختلاف بالسلوك.
+  const updateProfile: AuthApiContextType['updateProfile'] = async (payload) => {
+    const res = await API.patch('/users/me', payload)
+    return res.data?.data
+  }
+
+  // ⚠️ افتراض غير مؤكد: requestOwnDeletionSchema (authSchemas.js) — بنرسل دايمًا
+  // نص غير فارغ لـ reason تجنبًا لفشل التحقق لو كان الحقل إلزامي بالسكيما.
+  const requestAccountDeletion: AuthApiContextType['requestAccountDeletion'] = async (reason) => {
+    const res = await API.delete('/auth/account', {
+      data: { reason: reason?.trim() || 'لم يتم تحديد سبب من المستخدم.' },
+    })
+    return res.data?.data
   }
 
   const value: AuthApiContextType = {
@@ -305,13 +392,21 @@ export function AuthApiProvider({ children }: { children: ReactNode }) {
     googleRegisterConfirm,
     googleLinkConfirm,
     googleGuardianEmail,
+    guardianManageStatus,
+    guardianManageResend,
+    guardianManageUpdateEmail,
+    guardianApprove,
     restoreSession,
     setPendingMfaToken,
     logout,
+    getCurrentUser,
+    setupMfa,
+    confirmMfa,
     uploadProfilePicture,
     getProfilePictureUrl,
     submitKyc,
-    getCurrentUser, setupMfa, confirmMfa,
+    updateProfile,
+    requestAccountDeletion,
     getErrorMessage: extractErrorMessage,
   }
 
@@ -330,17 +425,14 @@ export function normalizeRole(raw: string | undefined): 'student' | 'instructor'
   return (known as readonly string[]).includes(lower) ? (lower as any) : 'student'
 }
 
-// ⚠️ ملاحظة أمنية: oauth.service.js (completeLoginForLinkedUser) ما بيستدعي
-// computeRedirectTo() إطلاقًا بمسار Google — يعني مدرّس يسجل عبر Google
-// ممكن يتجاوز فحص KYC/MFA يلي مطبّق بمسار كلمة المرور العادي. هاي الدالة
-// هون هي طبقة حماية إضافية بالفرونت لسد الفجوة مؤقتًا، لحد ما تنصلح بالباك
-// (session.service.js:computeRedirectTo لازم تُستدعى بمسار Google كمان).
 export function computeFallbackPage(user: BackendUser): Page {
   const role = normalizeRole(user.role)
   if (role === 'instructor') {
     const needsSetup = !user.mfa_enabled || user.kyc_status !== 'verified'
     return needsSetup ? 'instructor-setup' : 'instructor-dashboard'
   }
-  if (role === 'admin' || role === 'superadmin') return 'admin-dashboard'
+  if (role === 'admin' || role === 'superadmin') {
+    return !user.mfa_enabled ? 'admin-setup' : 'admin-dashboard'
+  }
   return 'student-dashboard'
 }

@@ -39,6 +39,11 @@ html,
 body {
   margin: 0;
   padding: 0;
+  /* حماية عامة: يمنع أي عنصر منسي (inline width ثابت، جدول بدون .table-responsive,
+     الخ) من إنتاج سكرول أفقي يكسر التجربة على الموبايل */
+  overflow-x: hidden;
+  width: 100%;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
@@ -47,6 +52,14 @@ body {
   color: var(--text);
   direction: rtl;
   min-height: 100vh;
+}
+
+/* أي صورة/SVG/فيديو ما إلها قاعدة صريحة تانية، لا تتجاوز عرض حاويتها أبداً */
+img,
+svg,
+video {
+  max-width: 100%;
+  height: auto;
 }
 
 ::-webkit-scrollbar {
@@ -710,7 +723,7 @@ body {
   scrollbar-width: none;
 }
 
-/* ================= Auth pages (Login/Register/ForgotPassword/GoogleCallback) ================= */
+/* ================= Auth pages (Login/Register/ForgotPassword/GoogleCallback/GuardianManage) ================= */
 .auth-shell {
   min-height: 100vh;
   direction: rtl;
@@ -754,6 +767,7 @@ body {
 
 .auth-card {
   width: 100%;
+  max-width: 460px;
   background: rgba(16, 6, 52, 0.85);
   backdrop-filter: blur(28px);
   -webkit-backdrop-filter: blur(28px);

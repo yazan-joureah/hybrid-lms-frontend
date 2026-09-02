@@ -5,6 +5,19 @@ import EdujarLogo from '../components/EdujarLogo'
 
 type LocalStep = 'processing' | 'birth-date' | 'link-password' | 'guardian-email' | 'error'
 
+// نفس منطق isMinor المستخدم في Register.tsx حرفياً — لا سبب لاستيراده من
+// مكان مشترك حالياً بما أن كل صفحة مستقلة تماماً (لا Context مشترك لهذا
+// الحساب المنطقي البسيط)، تفادياً لإعادة هيكلة غير ضرورية لأجل دالة سطرين.
+function isMinor(dob: string): boolean {
+  if (!dob) return false
+  const birthDate = new Date(dob)
+  const today = new Date()
+  let age = today.getFullYear() - birthDate.getFullYear()
+  const m = today.getMonth() - birthDate.getMonth()
+  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--
+  return age < 18
+}
+
 export default function GoogleCallback() {
   const { navigate, login, setUserName, setUserEmail } = useNav()
   const { googleCallback, googleRegisterConfirm, googleLinkConfirm, googleGuardianEmail, getErrorMessage } = useAuthApi()
@@ -19,6 +32,16 @@ export default function GoogleCallback() {
   const [role, setRole] = useState<'Student' | 'Instructor'>('Student')
   const [linkPassword, setLinkPassword] = useState('')
   const [guardianEmail, setGuardianEmail] = useState('')
+
+  const minor = isMinor(birthDate)
+
+  // UX ONLY — الفرض الأمني الفعلي في oauth.service.js
+  // (confirmGoogleRegistration → MINOR_CANNOT_BE_INSTRUCTOR). هنا الدور
+  // وتاريخ الميلاد بنفس الشاشة، فالتصحيح التلقائي الفوري ممكن وأنسب من
+  // مجرد تعطيل الخيار — يمنع إرسال طلب مرفوض للسيرفر أصلاً.
+  useEffect(() => {
+    if (minor && role === 'Instructor') setRole('Student')
+  }, [minor, role])
 
   const applyLoggedInUser = (user: any) => {
     const role = normalizeRole(user?.role)
@@ -151,10 +174,15 @@ export default function GoogleCallback() {
                     طالب
                   </label>
                   <label style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 13.5, cursor: 'pointer' }}>
-                    <input type="radio" checked={role === 'Instructor'} onChange={() => setRole('Instructor')} disabled={loading} />
+                    <input type="radio" checked={role === 'Instructor'} onChange={() => setRole('Instructor')} disabled={loading || minor} />
                     مدرّس
                   </label>
                 </div>
+                {minor && (
+                  <p style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.4)', margin: '-4px 0 0', textAlign: 'right' }}>
+                    خيار "مدرّس" غير متاح لمن هم دون 18 عاماً.
+                  </p>
+                )}
               </div>
               <div style={{ marginBottom: 16, textAlign: 'right' }}>
                 <label className="form-label">تاريخ الميلاد</label>

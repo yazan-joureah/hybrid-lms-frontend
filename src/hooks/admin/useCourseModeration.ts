@@ -4,23 +4,32 @@ import { useToast } from '../../context/ToastContext'
 import { courseService, type PendingCourseSummary, type CourseReviewDecision, type CourseModerationStatus } from '../../services/courseService'
 import { getErrorMessage } from '../../utils/errorMessages'
 
+export type CourseModerationView = 'pending' | 'all'
+
 export function useCourseModeration() {
     const { success, error: toastError } = useToast()
+    const [view, setView] = useState<CourseModerationView>('pending')
+    const [statusFilter, setStatusFilter] = useState('')
     const [courses, setCourses] = useState<PendingCourseSummary[]>([])
     const [loading, setLoading] = useState(true)
 
-    const fetchPending = useCallback(async () => {
+    const fetchCourses = useCallback(async () => {
         setLoading(true)
         try {
-            setCourses(await courseService.getPendingCourses())
+            if (view === 'pending') {
+                setCourses(await courseService.getPendingCourses())
+            } else {
+                const result = await courseService.getAllCoursesForAdmin({ status: statusFilter || undefined })
+                setCourses(result.courses)
+            }
         } catch (err) {
             toastError(getErrorMessage(err))
         } finally {
             setLoading(false)
         }
-    }, [toastError])
+    }, [view, statusFilter, toastError])
 
-    useEffect(() => { fetchPending() }, [fetchPending])
+    useEffect(() => { fetchCourses() }, [fetchCourses])
 
     const submitReview = async (courseId: string, decision: CourseReviewDecision, reason?: string) => {
         try {
@@ -30,7 +39,7 @@ export function useCourseModeration() {
                     decision === 'reject' ? 'تم رفض الكورس.' :
                         'تم إرجاع الكورس للمحاضر لإجراء تعديلات.'
             )
-            await fetchPending()
+            await fetchCourses()
             return true
         } catch (err) {
             toastError(getErrorMessage(err))
@@ -41,8 +50,12 @@ export function useCourseModeration() {
     const moderateStatus = async (courseId: string, status: CourseModerationStatus) => {
         try {
             await courseService.updateCourseStatus(courseId, status)
-            success(status === 'suspended' ? 'تم تعليق الكورس.' : 'تم أرشفة الكورس.')
-            await fetchPending()
+            success(
+                status === 'suspended' ? 'تم تعليق الكورس.' :
+                    status === 'archived' ? 'تم أرشفة الكورس.' :
+                        'تمت إعادة تفعيل الكورس ونشره من جديد.'
+            )
+            await fetchCourses()
             return true
         } catch (err) {
             toastError(getErrorMessage(err))
@@ -50,5 +63,5 @@ export function useCourseModeration() {
         }
     }
 
-    return { courses, loading, submitReview, moderateStatus }
+    return { view, setView, statusFilter, setStatusFilter, courses, loading, submitReview, moderateStatus, refetch: fetchCourses }
 }

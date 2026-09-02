@@ -6,13 +6,21 @@ interface Props {
     progressPercentage: number
     unavailable: boolean
     onClick: () => void
+    onCancel?: () => void
+    onRequestRefund?: () => void
+    actionLoading?: boolean
 }
 
-export function EnrollmentCard({ enrollment, progressPercentage, unavailable, onClick }: Props) {
+export function EnrollmentCard({ enrollment, progressPercentage, unavailable, onClick, onCancel, onRequestRefund, actionLoading }: Props) {
     const course = enrollment.course_id
     const isPendingPayment = enrollment.status === 'pending_payment'
     const isCancelled = enrollment.status === 'cancelled'
     const isCompleted = enrollment.status === 'completed'
+    const isActive = enrollment.status === 'active'
+    // إلغاء ذاتي مباشر: كورس مجاني فعّال، أو أي كورس لسا بانتظار الدفع
+    const canSelfCancel = (isActive && course?.course_type === 'free') || isPendingPayment
+    // كورس مدفوع فعّال → لازم يمر عبر طلب استرداد بدل الإلغاء المباشر
+    const canRequestRefund = isActive && course?.course_type === 'paid'
 
     return (
         <div
@@ -67,6 +75,31 @@ export function EnrollmentCard({ enrollment, progressPercentage, unavailable, on
                 <button className="btn-primary" style={{ width: '100%', justifyContent: 'center', padding: '9px', fontSize: 13.5 }} disabled={isCancelled} onClick={e => { e.stopPropagation(); onClick() }}>
                     {isCancelled ? '🚫 غير متاح' : unavailable ? '🛠️ قيد التحديث' : isPendingPayment ? '💳 إتمام الدفع' : isCompleted ? '🏆 مكتمل — مراجعة' : '▶ متابعة التعلم'}
                 </button>
+
+                {(canSelfCancel || canRequestRefund) && (
+                    <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                        {canSelfCancel && onCancel && (
+                            <button
+                                className="btn-ghost"
+                                style={{ flex: 1, fontSize: 12, padding: '6px', color: '#f87171' }}
+                                disabled={actionLoading}
+                                onClick={e => { e.stopPropagation(); onCancel() }}
+                            >
+                                {actionLoading ? '...' : '🚫 إلغاء التسجيل'}
+                            </button>
+                        )}
+                        {canRequestRefund && onRequestRefund && (
+                            <button
+                                className="btn-ghost"
+                                style={{ flex: 1, fontSize: 12, padding: '6px', color: '#fbbf24' }}
+                                disabled={actionLoading}
+                                onClick={e => { e.stopPropagation(); onRequestRefund() }}
+                            >
+                                {actionLoading ? '...' : '↩️ طلب استرداد'}
+                            </button>
+                        )}
+                    </div>
+                )}
             </div>
         </div>
     )
