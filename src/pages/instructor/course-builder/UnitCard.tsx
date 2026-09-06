@@ -6,6 +6,15 @@ const CONTENT_TYPE_LABELS: Record<ContentFormInput['contentType'], string> = {
     video: '🎥 فيديو', document: '📄 مستند', link: '🔗 رابط', text: '📝 نص',
 }
 
+// قصّ آمن عند أقرب فراغ قبل الحد الأقصى — يتجنّب مشكلة قطع الكلمات في
+// المنتصف التي تسبّبها -webkit-line-clamp مع نص عربي/لاتيني مختلط الاتجاه
+function truncateDesc(text: string, maxLen = 150) {
+    if (text.length <= maxLen) return text
+    const cut = text.slice(0, maxLen)
+    const lastSpace = cut.lastIndexOf(' ')
+    return (lastSpace > 40 ? cut.slice(0, lastSpace) : cut).trim() + '…'
+}
+
 interface Props {
     unit: UnitDetail
     index: number
@@ -24,6 +33,7 @@ export function UnitCard({ unit, index, isLast, onMoveUp, onMoveDown, onUpdate, 
     const [editTitle, setEditTitle] = useState(unit.title)
     const [editDesc, setEditDesc] = useState(unit.desc || '')
     const [showContentForm, setShowContentForm] = useState(false)
+    const [descExpanded, setDescExpanded] = useState(false)
 
     const startEdit = () => {
         setEditTitle(unit.title)
@@ -35,6 +45,8 @@ export function UnitCard({ unit, index, isLast, onMoveUp, onMoveDown, onUpdate, 
         await onUpdate(editTitle, editDesc || undefined)
         setEditing(false)
     }
+
+    const descTooLong = Boolean(unit.desc && unit.desc.length > 150)
 
     return (
         <div style={{ border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, overflow: 'hidden' }}>
@@ -66,6 +78,26 @@ export function UnitCard({ unit, index, isLast, onMoveUp, onMoveDown, onUpdate, 
 
             {expanded && (
                 <div style={{ padding: '12px 16px' }}>
+                    {unit.desc && (
+                        <div style={{
+                            fontSize: 12.5,
+                            lineHeight: 1.7,
+                            color: 'rgba(255,255,255,0.55)',
+                            marginBottom: 12,
+                            paddingBottom: 12,
+                            borderBottom: '1px solid rgba(255,255,255,0.06)',
+                        }}>
+                            {descExpanded || !descTooLong ? unit.desc : truncateDesc(unit.desc)}
+                            {descTooLong && (
+                                <button
+                                    onClick={() => setDescExpanded(v => !v)}
+                                    style={{ background: 'none', border: 'none', color: '#a855f7', cursor: 'pointer', fontSize: 12, fontFamily: 'inherit', padding: 0, marginRight: 6 }}
+                                >
+                                    {descExpanded ? 'إخفاء' : 'عرض المزيد'}
+                                </button>
+                            )}
+                        </div>
+                    )}
                     {(unit.content || []).map(item => (
                         <div key={item._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                             <span style={{ fontSize: 13.5 }}>{CONTENT_TYPE_LABELS[item.content_type]} — {item.title}</span>

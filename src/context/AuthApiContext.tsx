@@ -73,6 +73,7 @@ interface AuthApiContextType {
     redirectTo?: string
     guardianPending?: boolean
     guardianManageToken?: string
+    requiresEmailVerification?: boolean
   }>
   verifyMfa: (code: string) => Promise<{ user?: BackendUser; redirectTo?: string }>
   getCurrentUser: () => Promise<BackendUser>
@@ -144,7 +145,7 @@ export function AuthApiProvider({ children }: { children: ReactNode }) {
 
   const confirmMfa: AuthApiContextType['confirmMfa'] = async (code) => {
     const res = await API.post('/auth/mfa/totp/verify', { code })
-    return { backupCodes: res.data?.data?.backupCodes }
+    return { backupCodes: res.data?.data?.backup_codes }
   }
 
   const setSession = async (token: string): Promise<BackendUser> => {
@@ -170,9 +171,11 @@ export function AuthApiProvider({ children }: { children: ReactNode }) {
     } catch (err: any) {
       const code = err?.response?.data?.error?.code
       if (code === 'GUARDIAN_PENDING') {
-        // ✅ مؤكَّد من errorHandler.js: clientData بتنحط جوا "data" مش جوا "error"
         const guardianManageToken = err?.response?.data?.data?.guardian_manage_token
         return { guardianPending: true, guardianManageToken }
+      }
+      if (code === 'EMAIL_NOT_VERIFIED') {
+        return { requiresEmailVerification: true }
       }
       throw err
     }

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNav, GUARDIAN_MANAGE_TOKEN_KEY } from '../context/NavContext'
-import { useAuthApi, normalizeRole, computeFallbackPage } from '../context/AuthApiContext'
+import { useAuthApi, normalizeRole, computeFallbackPage, getCodeErrorMessage } from '../context/AuthApiContext'
 import EdujarLogo from '../components/EdujarLogo'
 import OtpInput from '../components/common/OtpInput'
 
@@ -13,6 +13,8 @@ export default function Login() {
   const {
     login: apiLogin,
     verifyMfa: apiVerifyMfa,
+    verifyEmail: apiVerifyEmail,
+    resendVerification,
     googleLogin,
     googleRegisterConfirm,
     googleLinkConfirm,
@@ -35,6 +37,15 @@ export default function Login() {
   const [mfaCode, setMfaCode] = useState('')
   const [mfaOtpKey, setMfaOtpKey] = useState(0)
   const [mfaError, setMfaError] = useState('')
+  const [useBackupCode, setUseBackupCode] = useState(false)
+  const [backupCodeInput, setBackupCodeInput] = useState('')
+
+  // Email Verification
+  const [verifyEmailStep, setVerifyEmailStep] = useState(false)
+  const [verifyEmailCode, setVerifyEmailCode] = useState('')
+  const [verifyEmailOtpKey, setVerifyEmailOtpKey] = useState(0)
+  const [verifyEmailError, setVerifyEmailError] = useState('')
+  const [cooldown, setCooldown] = useState(0)
 
   // Google OAuth flows
   const [oauthView, setOauthView] = useState<OAuthView>('none')
@@ -51,10 +62,9 @@ export default function Login() {
 
   const emailValid = EMAIL_RE.test(email)
 
-  // ✅ الدالة الأساسية لتطبيق حالة المستخدم مع تحديث المصادقة
   const applyLoggedInUser = (user: any) => {
     const role = normalizeRole(user?.role)
-    login(role)   // 🟢 الإصلاح الجوهري: تحديث isAuthenticated في App
+    login(role)
     setUserName(user?.full_name || email.trim().split('@')[0] || 'مستخدم')
     setUserEmail(user?.email || email.trim().toLowerCase())
     navigate(computeFallbackPage(user))
@@ -146,29 +156,91 @@ export default function Login() {
         } else {
           setError('حسابك بانتظار موافقة ولي الأمر. تحقق من بريدك الإلكتروني للتفاصيل.')
         }
+      } else if (result.requiresEmailVerification) {
+        // الحالة الجديدة: تفعيل البريد الإلكتروني
+        setVerifyEmailStep(true)
       } else if (result.user) {
         applyLoggedInUser(result.user)
       }
     } catch (err) {
-      setError(getErrorMessage(err))
+      const message = getErrorMessage(err)
+      // التحقق مما إذا كان الخطأ هو "الحساب غير مفعل" ليعرض واجهة التفعيل
+      if (message.includes('تحقق') || message.includes('غير مفعل')) {
+        setVerifyEmailStep(true)
+      } else {
+        setError(message)
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // دالة التحقق من رمز البريد
+  const handleVerifyEmail = async () => {
+    if (verifyEmailCode.length !== 6) {
+      setVerifyEmailError('أدخل الرمز المكوّن من 6 أرقام كاملاً')
+      return
+    }
+    setVerifyEmailError('')
+    setLoading(true)
+    try {
+      const result = await apiVerifyEmail(email.trim().toLowerCase(), verifyEmailCode)
+      if (result?.nextStep === 'guardian_pending') {
+        setError('تم التحقق! حسابك بانتظار موافقة ولي الأمر.')
+      } else {
+        setError('تم تفعيل حسابك بنجاح! يمكنك تسجيل الدخول الآن.')
+      }
+      setVerifyEmailStep(false)
+      setVerifyEmailCode('')
+      setPassword('')
+    } catch (err) {
+      setVerifyEmailError(getCodeErrorMessage(err, getErrorMessage(err)))
+      setVerifyEmailCode('')
+      setVerifyEmailOtpKey(k => k + 1)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // دالة إعادة إرسال الرمز
+  const handleResend = async () => {
+    if (cooldown > 0) return
+    setLoading(true)
+    try {
+      await resendVerification(email.trim().toLowerCase())
+      setCooldown(60)
+      const iv = setInterval(() => {
+        setCooldown((prev) => {
+          if (prev <= 1) { clearInterval(iv); return 0 }
+          return prev - 1
+        })
+      }, 1000)
+    } catch (err) {
+      setVerifyEmailError(getErrorMessage(err))
     } finally {
       setLoading(false)
     }
   }
 
   const handleMfaVerify = async () => {
-    if (mfaCode.length !== 6) {
+    const codeToSend = useBackupCode ? backupCodeInput.trim() : mfaCode
+    if (!useBackupCode && mfaCode.length !== 6) {
       setMfaError('أدخل الرمز المكوّن من 6 أرقام كاملاً')
+      return
+    }
+    if (useBackupCode && codeToSend.length < 6) {
+      setMfaError('أدخل رمز النسخ الاحتياطي كاملاً')
       return
     }
     setMfaError('')
     setLoading(true)
     try {
-      const result = await apiVerifyMfa(mfaCode)
+      const result = await apiVerifyMfa(codeToSend)
       if (result.user) applyLoggedInUser(result.user)
     } catch (err) {
       setMfaError(getErrorMessage(err))
       setMfaCode('')
+      setBackupCodeInput('')
       setMfaOtpKey(k => k + 1)
     } finally {
       setLoading(false)
@@ -261,6 +333,7 @@ export default function Login() {
       background: 'linear-gradient(135deg, #080320 0%, #1a0550 40%, #0d0340 100%)',
       display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden',
     }}>
+      {/* الخلفية المتوهجة */}
       <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
         <div style={{ position: 'absolute', top: '15%', right: '10%', width: 400, height: 400, borderRadius: '50%', background: 'radial-gradient(circle, rgba(124,58,237,0.22) 0%, transparent 70%)' }} />
         <div style={{ position: 'absolute', bottom: '10%', left: '8%', width: 350, height: 350, borderRadius: '50%', background: 'radial-gradient(circle, rgba(168,85,247,0.16) 0%, transparent 70%)' }} />
@@ -276,7 +349,7 @@ export default function Login() {
 
       <div className="auth-content">
         <div className="auth-card" style={{ maxWidth: 460 }}>
-          {/* Google OAuth sub‑flows */}
+          {/* Google OAuth sub-flow: Register */}
           {oauthView === 'google-register' && (
             <div style={{ textAlign: 'right' }}>
               <div style={{ textAlign: 'center', marginBottom: 20 }}>
@@ -328,6 +401,7 @@ export default function Login() {
             </div>
           )}
 
+          {/* Google OAuth sub-flow: Link */}
           {oauthView === 'google-link' && (
             <div style={{ textAlign: 'right' }}>
               <div style={{ textAlign: 'center', marginBottom: 20 }}>
@@ -349,6 +423,7 @@ export default function Login() {
             </div>
           )}
 
+          {/* Google OAuth sub-flow: Guardian */}
           {oauthView === 'google-guardian' && (
             <div style={{ textAlign: 'right' }}>
               {!oauthGuardianSent ? (
@@ -382,7 +457,7 @@ export default function Login() {
           )}
 
           {/* Normal login */}
-          {oauthView === 'none' && !mfaStep && (
+          {oauthView === 'none' && !mfaStep && !verifyEmailStep && (
             <>
               <div style={{ textAlign: 'center', marginBottom: 24 }}>
                 <div style={{
@@ -493,6 +568,55 @@ export default function Login() {
             </>
           )}
 
+          {/* Email Verification Step */}
+          {oauthView === 'none' && !mfaStep && verifyEmailStep && (
+            <>
+              <div style={{ textAlign: 'center', marginBottom: 24 }}>
+                <div style={{ fontSize: 36, marginBottom: 12 }}>📧</div>
+                <h1 style={{ fontSize: 22, fontWeight: 800, margin: '0 0 8px' }}>تفعيل حسابك</h1>
+                <p style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.5)', margin: 0 }}>
+                  أدخل الرمز المكوّن من 6 أرقام المرسل إلى<br />
+                  <span style={{ color: '#a855f7', fontWeight: 600 }}>{email}</span>
+                </p>
+              </div>
+
+              <div style={{ marginBottom: 6 }}>
+                <OtpInput key={verifyEmailOtpKey} onComplete={setVerifyEmailCode} error={!!verifyEmailError} disabled={loading} />
+              </div>
+
+              {verifyEmailError && <div style={{ textAlign: 'center', color: '#f87171', fontSize: 13, marginBottom: 12, marginTop: 4 }}>{verifyEmailError}</div>}
+
+              <button
+                className="btn-primary"
+                style={{ width: '100%', justifyContent: 'center', padding: '13px', fontSize: 15, marginTop: 20, marginBottom: 10 }}
+                onClick={handleVerifyEmail}
+                disabled={loading}
+              >
+                {loading ? '...جارٍ التحقق' : 'تفعيل الحساب'}
+              </button>
+
+              <div style={{ textAlign: 'center', fontSize: 13, color: 'rgba(255,255,255,0.5)' }}>
+                <button className="btn-ghost" style={{ fontSize: 13, color: '#a855f7', padding: '4px 8px' }} onClick={handleResend} disabled={cooldown > 0 || loading}>
+                  {cooldown > 0 ? `إعادة الإرسال خلال ${cooldown}s` : 'لم يصلك الرمز؟ إعادة الإرسال'}
+                </button>
+              </div>
+
+              <button
+                className="btn-ghost"
+                style={{ width: '100%', justifyContent: 'center', marginTop: 20 }}
+                onClick={() => {
+                  setVerifyEmailStep(false)
+                  setVerifyEmailCode('')
+                  setVerifyEmailError('')
+                  setError('')
+                  setPassword('')
+                }}
+              >
+                ← العودة لتسجيل الدخول
+              </button>
+            </>
+          )}
+
           {/* MFA step */}
           {oauthView === 'none' && mfaStep && (
             <>
@@ -503,7 +627,19 @@ export default function Login() {
               </div>
 
               <div style={{ marginBottom: 6 }}>
-                <OtpInput key={mfaOtpKey} onComplete={setMfaCode} error={!!mfaError} disabled={loading} />
+                {useBackupCode ? (
+                  <input
+                    className="form-input"
+                    style={{ textAlign: 'center', letterSpacing: 2, fontFamily: 'monospace' }}
+                    placeholder="أدخل رمز النسخ الاحتياطي"
+                    value={backupCodeInput}
+                    onChange={e => setBackupCodeInput(e.target.value.trim())}
+                    disabled={loading}
+                    autoFocus
+                  />
+                ) : (
+                  <OtpInput key={mfaOtpKey} onComplete={setMfaCode} error={!!mfaError} disabled={loading} />
+                )}
               </div>
 
               {mfaError && <div style={{ textAlign: 'center', color: '#f87171', fontSize: 13, marginBottom: 12, marginTop: 4 }}>{mfaError}</div>}
@@ -518,10 +654,25 @@ export default function Login() {
               </button>
               <button
                 className="btn-ghost"
+                style={{ width: '100%', justifyContent: 'center', fontSize: 12.5 }}
+                onClick={() => {
+                  setUseBackupCode(v => !v)
+                  setMfaError('')
+                  setMfaCode('')
+                  setBackupCodeInput('')
+                  setMfaOtpKey(k => k + 1)
+                }}
+              >
+                {useBackupCode ? '← استخدام تطبيق المصادقة بدلاً من ذلك' : 'فقدت جهازك؟ استخدم رمز نسخ احتياطي'}
+              </button>
+              <button
+                className="btn-ghost"
                 style={{ width: '100%', justifyContent: 'center' }}
                 onClick={() => {
                   setMfaStep(false)
                   setMfaCode('')
+                  setBackupCodeInput('')
+                  setUseBackupCode(false)
                   setMfaOtpKey(k => k + 1)
                   setMfaError('')
                 }}

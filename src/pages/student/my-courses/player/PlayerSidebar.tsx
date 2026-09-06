@@ -1,4 +1,5 @@
 // src/pages/student/my-courses/player/PlayerSidebar.tsx
+import { useState } from 'react'
 import type { PlayerUnit, ContentItem } from '../../../../services/courseService'
 import type { StudentQuizSummary } from '../../../../services/quizService'
 import type { PeerAssignment } from '../../../../services/peerService'
@@ -13,6 +14,15 @@ const SESSION_STATUS_META: Record<LiveSession['status'], { label: string; color:
     ongoing: { label: 'مباشر الآن', color: '#ef4444' },
     ended: { label: 'انتهت', color: '#94a3b8' },
     cancelled: { label: 'ملغاة', color: '#64748b' },
+}
+
+// قصّ آمن عند أقرب فراغ قبل الحد الأقصى — يتجنّب مشكلة قطع الكلمات في
+// المنتصف التي تسبّبها -webkit-line-clamp مع نص عربي/لاتيني مختلط الاتجاه
+function truncateDesc(text: string, maxLen = 130) {
+    if (text.length <= maxLen) return text
+    const cut = text.slice(0, maxLen)
+    const lastSpace = cut.lastIndexOf(' ')
+    return (lastSpace > 40 ? cut.slice(0, lastSpace) : cut).trim() + '…'
 }
 
 interface Props {
@@ -50,6 +60,16 @@ export function PlayerSidebar({
     onSelectPeer,
     onSelectSession,
 }: Props) {
+    const [expandedDescIds, setExpandedDescIds] = useState<Set<string>>(new Set())
+    const toggleDesc = (unitId: string) => {
+        setExpandedDescIds(prev => {
+            const next = new Set(prev)
+            if (next.has(unitId)) next.delete(unitId)
+            else next.add(unitId)
+            return next
+        })
+    }
+
     const finalExams = quizzes.filter(q => q.quiz_type === 'exam')
     const getUnitQuizzes = (unitId: string) => quizzes.filter(q => q.quiz_type === 'quiz' && q.unit_id === unitId)
     const generalQuizzes = quizzes.filter(q => q.quiz_type === 'quiz' && !q.unit_id)
@@ -70,6 +90,8 @@ export function PlayerSidebar({
                     const unitQuizzes = getUnitQuizzes(unit._id)
                     const unitPeerAssignments = getUnitPeerAssignments(unit._id)
                     const unitLiveSessions = getUnitLiveSessions(unit._id)
+                    const descTooLong = Boolean(unit.desc && unit.desc.length > 130)
+                    const isDescExpanded = expandedDescIds.has(unit._id)
 
                     return (
                         <div key={unit._id} style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
@@ -83,6 +105,25 @@ export function PlayerSidebar({
 
                             {isExpanded && (
                                 <div style={{ padding: '4px 0' }}>
+                                    {unit.desc && (
+                                        <div style={{
+                                            padding: '9px 16px',
+                                            fontSize: 12,
+                                            lineHeight: 1.7,
+                                            color: 'rgba(255,255,255,0.5)',
+                                            borderBottom: '1px solid rgba(255,255,255,0.05)',
+                                        }}>
+                                            {isDescExpanded || !descTooLong ? unit.desc : truncateDesc(unit.desc)}
+                                            {descTooLong && (
+                                                <button
+                                                    onClick={() => toggleDesc(unit._id)}
+                                                    style={{ background: 'none', border: 'none', color: '#a855f7', cursor: 'pointer', fontSize: 11.5, fontFamily: 'inherit', padding: 0, marginRight: 6 }}
+                                                >
+                                                    {isDescExpanded ? 'إخفاء' : 'عرض المزيد'}
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
                                     {isLoading ? (
                                         <div style={{ padding: '10px 16px', fontSize: 12.5, color: 'rgba(255,255,255,0.4)' }}>جارٍ التحميل...</div>
                                     ) : (

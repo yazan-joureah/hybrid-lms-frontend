@@ -55,10 +55,36 @@ export function PeerAssignmentFormModal({ editingAssignment, units, onSubmit, on
         if (form.rubric.some(r => !r.criterion.trim())) { setValidationError('كل معيار تقييم يجب أن يكون له اسم.'); return }
         if (!weightSumOk) { setValidationError('مجموع أوزان المعايير يجب أن يساوي 100%.'); return }
 
+        // 🛠️ تحقق ترتيب المواعيد قبل الإرسال — يمنع خطأ الخادم INVALID_REVIEW_DEADLINE
+        if (form.submissionDeadline && form.reviewDeadline &&
+            new Date(form.reviewDeadline) <= new Date(form.submissionDeadline)) {
+            setValidationError('موعد نهاية المراجعة يجب أن يكون بعد موعد نهاية التسليم.')
+            return
+        }
+
+
+        if (form.submissionDeadline && form.reviewDeadline &&
+            new Date(form.reviewDeadline) <= new Date(form.submissionDeadline)) {
+            setValidationError('موعد نهاية المراجعة يجب أن يكون بعد موعد نهاية التسليم.')
+            return
+        }
         // 🛠️ إزالة حقول التاريخ الفارغة قبل الإرسال
         const payload = { ...form };
         if (!payload.submissionDeadline) delete payload.submissionDeadline;
         if (!payload.reviewDeadline) delete payload.reviewDeadline;
+
+        // 🛠️ تحويل صيغة datetime-local (بلا ثواني ولا منطقة زمنية، مثل
+        // "2026-09-07T09:09") إلى ISO 8601 كامل مطلوب من Zod (.datetime())
+        // في الخادم — وإلا يُرفض بـ "must be a valid ISO date-time"
+        if (payload.submissionDeadline) payload.submissionDeadline = new Date(payload.submissionDeadline).toISOString();
+        if (payload.reviewDeadline) payload.reviewDeadline = new Date(payload.reviewDeadline).toISOString();
+        // 🛠️ إزالة unitId الفارغ (القيمة الافتراضية "" من عنصر <select>)
+        if (!payload.unitId) delete payload.unitId;
+
+        // 🛠️ إزالة unitId الفارغ (القيمة الافتراضية "" من عنصر <select>) —
+        // إرسالها كسلسلة فارغة يفشل فحص صيغة ObjectId في الخادم قبل ما يوصل
+        // لمنطق "اختياري" في الخدمة نفسها
+        if (!payload.unitId) delete payload.unitId;
 
         setSubmitting(true)
         const ok = await onSubmit(payload)

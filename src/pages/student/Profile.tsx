@@ -27,6 +27,13 @@ const AGE_CORRECTION_ERROR_MESSAGES: Record<string, string> = {
   ACCOUNT_NOT_ACTIVE: 'حسابك غير نشط حالياً.',
 }
 
+const REJECTION_REASON_LABELS: Record<string, string> = {
+  UNCLEAR_IMAGE: 'الصورة غير واضحة بما يكفي للمراجعة.',
+  DOCUMENT_EXPIRED: 'الوثيقة المرفوعة منتهية الصلاحية.',
+  DATA_MISMATCH: 'البيانات في الوثيقة لا تطابق بيانات حسابك (تم تصحيح تاريخ ميلادك تلقائياً — تحقق منه بتبويب "الملف الشخصي" قبل إعادة الرفع).',
+  DOCUMENT_NOT_ACCEPTED: 'نوع الوثيقة المرفوعة غير مقبول.',
+}
+
 export default function Profile() {
   const { userName, setUserName, userEmail, setUserEmail, userPhone, setUserPhone, userDob, setUserDob, userBio, setUserBio, userGender, setUserGender, logout, navigate } = useNav()
   const {
@@ -77,6 +84,7 @@ export default function Profile() {
   const [selfieFile, setSelfieFile] = useState<File | null>(null)
   const [kycLoading, setKycLoading] = useState(false)
   const [kycError, setKycError] = useState('')
+  const [latestRejectionReason, setLatestRejectionReason] = useState<string | null>(null)
 
   // تصحيح العمر بعد age_flagged
   const [correctionBirthDate, setCorrectionBirthDate] = useState('')
@@ -128,10 +136,17 @@ export default function Profile() {
     })
   }
 
+  const loadLatestKycReason = () => {
+    kycService.getMyLatestRequest()
+      .then((latest) => setLatestRejectionReason(latest?.reviewDecisionReason || null))
+      .catch(() => setLatestRejectionReason(null)) // فشل صامت — التفصيل غير حرج لعرض الصفحة
+  }
+
   useEffect(() => {
     let cancelled = false
     setProfileLoading(true)
     loadUser()
+      .then(() => { if (!cancelled) loadLatestKycReason() })
       .catch(() => {
         if (cancelled) return
         setBackendRole('Student')
@@ -157,13 +172,13 @@ export default function Profile() {
         phone: phone.trim() || undefined,
         bio: bio.trim() || undefined,
         // تاريخ الميلاد مقفول سيرفريًا بعد التحقق (KYC) — لا نرسله أصلاً بهالحالة
-        birth_date: kycStatus !== 'verified' && dob ? new Date(dob).toISOString() : undefined,
+        birth_date: kycStatus !== 'verified' && dob ? dob : undefined,
       })
       setUserName(updated.full_name || name)
       setUserEmail(updated.email || email)
       if (updated.phone !== undefined) setUserPhone(updated.phone || '')
       if (updated.bio !== undefined) setUserBio(updated.bio || '')
-      if (updated.birth_date) setUserDob(new Date(updated.birth_date).toISOString().slice(0, 10))
+      if (updated.birth_date) setUserDob(String(updated.birth_date).slice(0, 10))
       setUserGender(gender) // ⚠️ الجندر UI محلي فقط — لا يوجد حقل جندر بموديل User بالباك
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
@@ -260,6 +275,7 @@ export default function Profile() {
     try {
       await kycService.submitMyRequest({ idDocumentType, idDocumentFile: idFile, selfieFile })
       await loadUser()
+      setLatestRejectionReason(null) // طلب جديد قيد المراجعة — لا داعي لعرض سبب الرفض القديم
       setIdFile(null)
       setSelfieFile(null)
     } catch (err: any) {
@@ -675,7 +691,14 @@ export default function Profile() {
               {(kycStatus === 'rejected' || kycStatus === 'not_submitted' || !kycStatus) && !(isInstructor && !mfaEnabled) && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 480 }}>
                   {kycStatus === 'rejected' && (
-                    <p style={{ color: '#f87171', fontSize: 13.5 }}>❌ تم رفض طلبك السابق. الرجاء إعادة التقديم بمستندات واضحة.</p>
+                    <div style={{ padding: 14, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, marginBottom: 16 }}>
+                      <p style={{ color: '#f87171', fontSize: 13.5, margin: 0, fontWeight: 600 }}>❌ تم رفض طلبك السابق</p>
+                      <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, margin: '6px 0 0' }}>
+                        السبب: {latestRejectionReason
+                          ? (REJECTION_REASON_LABELS[latestRejectionReason] || latestRejectionReason)
+                          : 'غير محدَّد — الرجاء إعادة التقديم بمستندات واضحة.'}
+                      </p>
+                    </div>
                   )}
                   <div>
                     <label className="form-label">نوع الوثيقة</label>

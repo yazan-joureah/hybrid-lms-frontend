@@ -8,6 +8,15 @@ interface YellowWarning {
     discrepancyYears: number
 }
 
+// رسائل مخصّصة حسب outcome الفعلي — بدل رسالة "تم القبول" الموحّدة يلي
+// كانت صحيحة أيام outcome كانت بس verified/age_flagged
+const OUTCOME_MESSAGES: Record<string, { text: string; tone: 'success' | 'warning' }> = {
+    verified: { text: 'تم قبول طلب التوثيق بنجاح.', tone: 'success' },
+    age_flagged: { text: 'تم تعليق التوثيق مؤقتاً بسبب تعارض بالعمر — الحساب نفسه يبقى نشطاً.', tone: 'warning' },
+    rejected_autocorrected: { text: 'تم رفض الطلب بسبب عدم تطابق تاريخ الميلاد، وتم تصحيحه تلقائياً — يمكن للمستخدم إعادة التقديم فوراً.', tone: 'warning' },
+    rejected_suspended: { text: '⚠️ تم رفض الطلب وتعليق الحساب بالكامل — تبيّن أن مقدّم الطلب قاصر يحاول التسجيل كمدرّس.', tone: 'warning' },
+}
+
 export function useKycReviewDetail(requestId: string, onDecided: () => void) {
     const { success, error: toastError } = useToast()
 
@@ -62,16 +71,17 @@ export function useKycReviewDetail(requestId: string, onDecided: () => void) {
         if (!documentBirthDate) { toastError('أدخل تاريخ الميلاد كما هو مكتوب بالوثيقة.'); return false }
         setActionLoading(true)
         try {
-            await kycService.approve(requestId, documentBirthDate, optionalNote.trim() || undefined, confirmYellowTier)
-            success('تم قبول طلب التوثيق بنجاح.')
+            const outcome = await kycService.approve(requestId, documentBirthDate, optionalNote.trim() || undefined, confirmYellowTier)
+            const msg = OUTCOME_MESSAGES[outcome] || OUTCOME_MESSAGES.verified
+            success(msg.text)
             setYellowWarning(null)
             onDecided()
             return true
         } catch (err) {
             if (getErrorCode(err) === 'AGE_DISCREPANCY_REQUIRES_CONFIRMATION') {
-                // ⚠️ AppError يضع clientData في response.data مباشرة (وليس error.details)
-                const d = (err as any)?.response?.data?.data || {}
-                setYellowWarning({ discrepancyYears: d.discrepancyYears ?? 0 })
+                // الـ Controller الجديد يضع tier/discrepancyYears داخل error مباشرة
+                const errBody = (err as any)?.response?.data?.error || {}
+                setYellowWarning({ discrepancyYears: errBody.discrepancyYears ?? 0 })
                 return false
             }
             toastError(getErrorMessage(err))

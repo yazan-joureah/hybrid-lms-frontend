@@ -24,6 +24,14 @@ export interface SubmitKycPayload {
     selfieFile: File
 }
 
+export interface MyLatestKycRequest {
+    status: 'review_pending' | 'verified' | 'rejected' | 'age_flagged'
+    reviewDecisionReason: string | null
+    ageDiscrepancyYears: number | null
+    submittedAt: string
+    reviewedAt: string | null
+}
+
 export const kycService = {
     /** POST /kyc/requests — تسليم طلب توثيق هوية من الطالب/المدرّس نفسه */
     submitMyRequest: async ({ idDocumentType, idDocumentFile, selfieFile }: SubmitKycPayload): Promise<void> => {
@@ -54,12 +62,13 @@ export const kycService = {
         documentBirthDate: string,
         optionalNote?: string,
         confirmYellowTier = false,
-    ): Promise<void> => {
-        await API.post(`/admin/kyc/requests/${requestId}/approve`, {
+    ): Promise<string> => {
+        const res = await API.post(`/admin/kyc/requests/${requestId}/approve`, {
             documentBirthDate,
             optionalNote: optionalNote || undefined,
             confirmYellowTier,
         })
+        return res.data?.data?.outcome || 'verified'
     },
 
     reject: async (requestId: string, rejectionReason: string): Promise<void> => {
@@ -72,5 +81,11 @@ export const kycService = {
             birth_date: birthDate,
             guardian_email: guardianEmail,
         })
+    },
+
+    // ---------- جلب أحدث طلب KYC للمستخدم الحالي ----------
+    getMyLatestRequest: async (): Promise<MyLatestKycRequest | null> => {
+        const res = await API.get('/kyc/my-status')
+        return res.data?.data?.latestRequest || null
     },
 }

@@ -1033,3 +1033,32 @@ video {
     display: none;
   }
 }
+
+
+/* ================= Select dropdown fix =================
+   <option> يُرندَر بمعزل عن theming الصفحة (backdrop-filter لا يعمل
+   عليه، والمتصفح يستخدم لوناً افتراضياً أبيض) — لازم تلوين صريح هنا،
+   ونفس ألوان --bg-card/--text المستخدمة بباقي عناصر التطبيق. */
+select.form-input {
+  color-scheme: dark;
+  /* rgba الشفافة تبع .form-input تبقى للـ input المُغلَق نفسه، بس القائمة
+     المفتوحة بتحتاج خلفية صلبة حتى النص يكون مقروء فوقها بكل المتصفحات */
+  background-color: var(--bg-2);
+}
+
+select.form-input option {
+  background-color: var(--bg-2);
+  color: var(--text);
+}
+
+select.form-input option:checked,
+select.form-input option:hover,
+select.form-input option:focus {
+  background-color: var(--primary);
+  color: var(--text);
+}
+
+select.form-input:disabled {
+  color: var(--text-subtle);
+  cursor: not-allowed;
+}
