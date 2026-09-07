@@ -7,6 +7,7 @@ import { useInstructorCourseAnalytics } from '../../hooks/report/useInstructorCo
 import { useInstructorLiveSessions } from '../../hooks/live/useInstructorLiveSessions'
 import { COURSE_BUILDER_TAB_PATH } from '../../routes/dynamicRoutes'
 import { SkeletonLoader } from '../../components/common/Loading'
+import { ModalPortal } from '../../components/common/ModalPortal' // added
 
 const ALERT_TYPE_LABELS: Record<string, string> = {
   LOW_PERFORMANCE: 'أداء منخفض بالاختبارات',
@@ -25,6 +26,7 @@ export default function InstructorDashboard() {
   const [courses, setCourses] = useState<InstructorCourse[]>([])
   const [coursesLoading, setCoursesLoading] = useState(true)
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null)
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null) // added
 
   useEffect(() => {
     courseService.getMyInstructorCourses()
@@ -37,6 +39,16 @@ export default function InstructorDashboard() {
 
   const { analytics, loading: analyticsLoading } = useInstructorCourseAnalytics(selectedCourseId)
   const { sessions, loading: sessionsLoading } = useInstructorLiveSessions(selectedCourseId)
+
+  // added
+  const selectedFlagged = useMemo(
+    () => analytics?.flaggedStudents.find(s => s.studentId === selectedStudentId) ?? null,
+    [analytics, selectedStudentId]
+  )
+  const selectedStudentRow = useMemo(
+    () => analytics?.students.find(s => s.studentId === selectedStudentId) ?? null,
+    [analytics, selectedStudentId]
+  )
 
   const goToLiveTab = () => {
     if (selectedCourseId) routerNavigate(COURSE_BUILDER_TAB_PATH(selectedCourseId, 'live'))
@@ -149,7 +161,14 @@ export default function InstructorDashboard() {
                     )
                   })}
                   {analytics.flaggedStudents.map(s => (
-                    <div key={s.studentId} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 10, background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)' }}>
+                    <div
+                      key={s.studentId}
+                      onClick={() => setSelectedStudentId(s.studentId)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={e => { if (e.key === 'Enter') setSelectedStudentId(s.studentId) }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 10, background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', cursor: 'pointer' }}
+                    >
                       <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg, #7c3aed, #a855f7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
                         {s.fullName?.[0] || '؟'}
                       </div>
@@ -223,6 +242,61 @@ export default function InstructorDashboard() {
           ))}
         </div>
       </div>
+
+      {/* Modal to display student details */}
+      {selectedFlagged && (
+        <ModalPortal>
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, backdropFilter: 'blur(4px)' }}>
+            <div style={{ background: 'rgba(12,4,45,0.98)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 20, width: '100%', maxWidth: 420 }}>
+              <div style={{ padding: '18px 24px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ fontSize: 16, fontWeight: 800, margin: 0 }}>تفاصيل الطالب</h3>
+                <button onClick={() => setSelectedStudentId(null)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: 18, cursor: 'pointer' }}>✕</button>
+              </div>
+
+              <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'linear-gradient(135deg, #7c3aed, #a855f7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 700, flexShrink: 0 }}>
+                    {selectedFlagged.fullName?.[0] || '؟'}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 15, fontWeight: 700 }}>{selectedFlagged.fullName}</div>
+                    {selectedStudentRow && (
+                      <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.5)' }}>{selectedStudentRow.email}</div>
+                    )}
+                  </div>
+                </div>
+
+                {selectedStudentRow ? (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                    <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 12, padding: 14 }}>
+                      <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>نسبة مشاهدة المحتوى</div>
+                      <div style={{ fontSize: 18, fontWeight: 700 }}>
+                        {selectedStudentRow.contentViewedPercent == null ? '—' : `${Math.round(selectedStudentRow.contentViewedPercent * 100)}%`}
+                      </div>
+                      <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>
+                        {selectedStudentRow.contentViewedCount} عنصر تمت مشاهدته
+                      </div>
+                    </div>
+                    <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 12, padding: 14 }}>
+                      <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>نسبة الحضور</div>
+                      <div style={{ fontSize: 18, fontWeight: 700 }}>
+                        {selectedStudentRow.attendancePercent == null ? '—' : `${Math.round(selectedStudentRow.attendancePercent * 100)}%`}
+                      </div>
+                      <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>
+                        {selectedStudentRow.attendedSessionsCount} حصة تم حضورها
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)' }}>
+                    لا تتوفر تفاصيل إضافية لهذا الطالب حالياً.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </ModalPortal>
+      )}
     </div>
   )
 }

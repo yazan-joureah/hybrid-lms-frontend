@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
-import { useNav, GUARDIAN_MANAGE_TOKEN_KEY } from '../context/NavContext'
+import { useNavigate as useRouterNavigate } from 'react-router-dom'
+import { useNav, GUARDIAN_MANAGE_TOKEN_KEY, type Page } from '../context/NavContext'
 import { useAuthApi, normalizeRole, computeFallbackPage, getCodeErrorMessage } from '../context/AuthApiContext'
+import { PAGE_TO_PATH } from '../routes/pageRoutes'
 import EdujarLogo from '../components/EdujarLogo'
 import OtpInput from '../components/common/OtpInput'
 
@@ -10,6 +12,7 @@ type OAuthView = 'none' | 'google-register' | 'google-link' | 'google-guardian'
 
 export default function Login() {
   const { navigate, login, setUserName, setUserEmail } = useNav()
+  const routerNavigate = useRouterNavigate()
   const {
     login: apiLogin,
     verifyMfa: apiVerifyMfa,
@@ -64,10 +67,11 @@ export default function Login() {
 
   const applyLoggedInUser = (user: any) => {
     const role = normalizeRole(user?.role)
-    login(role)
+    login(role, user?.kyc_status, !!user?.mfa_enabled)
     setUserName(user?.full_name || email.trim().split('@')[0] || 'مستخدم')
     setUserEmail(user?.email || email.trim().toLowerCase())
-    navigate(computeFallbackPage(user))
+    const fallbackPage = computeFallbackPage(user) as Exclude<Page, 'verify-certificate'>
+    routerNavigate(PAGE_TO_PATH[fallbackPage])
   }
 
   const cleanUrl = () => {

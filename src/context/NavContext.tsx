@@ -19,7 +19,7 @@ interface NavContextType {
   role: Role
   setRole: (r: Role) => void
   isAuthenticated: boolean
-  login: (r: Role) => void
+  login: (r: Role, kycStatus?: string, mfaEnabled?: boolean) => void
   logout: () => void
   userName: string
   setUserName: (n: string) => void

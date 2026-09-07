@@ -165,9 +165,15 @@ function AppShell() {
     setMfaEnabled(!!user.mfa_enabled)
   }
 
-  const login = useCallback((r: Role) => {
+  const login = useCallback((r: Role, kyc?: string, mfa?: boolean) => {
     setRoleState(r)
     setIsAuthenticated(true)
+    // نطبّق القيم الحقيقية القادمة مباشرة من استجابة تسجيل الدخول (بدل
+    // الانتظار لدورة refreshUser لاحقة من Layout مثلاً) — هذا يمنع state
+    // قديمة (mfaEnabled الافتراضية false) من التسبب بتوجيه خاطئ مؤقت
+    // لصفحة setup ثم تصحيحه تلقائياً بعد ثانية (الفليكر).
+    if (kyc !== undefined) setKycStatus(kyc)
+    if (mfa !== undefined) setMfaEnabled(mfa)
   }, [])
 
   const logout = useCallback(async () => {
