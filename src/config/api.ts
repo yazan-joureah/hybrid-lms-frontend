@@ -3,7 +3,7 @@ import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios'
 
 // الآن اتصال Cross-Origin مباشر (Vercel → Render) — لا حاجة لـ Same-Origin Proxy
 // بعد ما استبدلنا Double-Submit Cookie بـ Origin Validation في الباك اند.
-export const BASE_URL = (import.meta as any).env?.VITE_API_URL || 'https://hybrid-lms-backend.onrender.com/api/v1'
+export const BASE_URL = 'https://hybrid-lms-backend.onrender.com/api/v1'
 
 const API = axios.create({
   baseURL: BASE_URL,

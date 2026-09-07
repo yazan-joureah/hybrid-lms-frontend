@@ -2,7 +2,7 @@
 import { useEffect, useRef } from 'react'
 import { io, type Socket } from 'socket.io-client'
 
-const SOCKET_URL = (import.meta.env.VITE_SOCKET_URL as string) || 'http://localhost:3000'
+const SOCKET_URL = 'https://hybrid-lms-backend.onrender.com'
 
 interface Options {
     joinToken: string | null
