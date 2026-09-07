@@ -37,9 +37,6 @@ export function CourseOverviewPanel({ enrollment, onBack }: Props) {
     const courseId = enrollment.course_id?._id
     const [searchParams, setSearchParams] = useSearchParams()
 
-    // ✅ أدابتر يخزّن اختيار المحتوى الحالي بـ query params على نفس رابط
-    // /my-courses/:enrollmentId — فيصير الرابط قابل للمشاركة ويصمد أمام F5،
-    // بدل الاعتماد على sessionStorage الذي يضيع بين التبويبات/الأجهزة.
     const selectionStorage = useMemo(() => ({
         get: (): StoredSelection | null => {
             const kind = searchParams.get('kind')
@@ -68,6 +65,7 @@ export function CourseOverviewPanel({ enrollment, onBack }: Props) {
     }), [searchParams, setSearchParams])
 
     const player = useCoursePlayer(courseId, selectionStorage)
+
     return (
         <div>
             <button onClick={onBack} style={{ background: 'none', border: 'none', color: '#a855f7', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13.5, display: 'flex', alignItems: 'center', gap: 6, padding: 0, marginBottom: 20 }}>
@@ -125,8 +123,7 @@ export function CourseOverviewPanel({ enrollment, onBack }: Props) {
                         ) : player.selection.kind === 'content' ? (
                             <ContentViewer
                                 item={player.selection.item}
-                                blobUrl={player.contentBlobUrl}
-                                loading={player.contentLoading}
+                                fileUrl={player.contentFileUrl}
                                 marking={player.marking}
                                 onMarkComplete={player.markActiveComplete}
                             />

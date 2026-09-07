@@ -302,6 +302,21 @@ export const courseService = {
         return res.data
     },
 
+    // Returns the direct file URL to be used in <video src> or <embed> for native streaming.
+    // The backend now supports Range requests, so the browser can seek without downloading the whole file.
+    // If your API uses JWT via Authorization header, you need to use HttpOnly cookies instead,
+    // or append the token as a query parameter (less secure). The method below returns the path
+    // assuming your API uses cookies or allows anonymous access for authenticated requests.
+    getContentFileUrl: (courseId: string, contentId: string): string => {
+        const base = API.defaults.baseURL || ''
+        const path = `/courses/${courseId}/content/${contentId}/file`
+        // Option: If you need to pass token as query param (not recommended for production)
+        // const token = localStorage.getItem('accessToken')
+        // return `${base}${path}?token=${token}`
+        // For cookie-based auth, just return the absolute path:
+        return `${base}${path}`
+    },
+
     markContentComplete: async (courseId: string, contentId: string): Promise<void> => {
         await API.post(`/courses/${courseId}/progress`, { content_id: contentId })
     },

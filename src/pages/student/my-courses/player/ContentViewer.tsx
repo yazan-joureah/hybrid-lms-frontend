@@ -7,13 +7,12 @@ const TYPE_LABELS: Record<ContentItem['content_type'], string> = {
 
 interface Props {
     item: ContentItem
-    blobUrl: string | null
-    loading: boolean
+    fileUrl: string | null
     marking: boolean
     onMarkComplete: () => void
 }
 
-export function ContentViewer({ item, blobUrl, loading, marking, onMarkComplete }: Props) {
+export function ContentViewer({ item, fileUrl, marking, onMarkComplete }: Props) {
     return (
         <div style={{ background: 'var(--bg-card)', backdropFilter: 'blur(20px)', border: '1px solid var(--border)', borderRadius: 18, padding: 24, minHeight: 420 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
@@ -32,21 +31,17 @@ export function ContentViewer({ item, blobUrl, loading, marking, onMarkComplete 
             </div>
 
             {item.content_type === 'video' && (
-                loading ? (
-                    <div style={{ textAlign: 'center', padding: '60px 0', color: 'rgba(255,255,255,0.4)' }}>جارٍ تحميل الفيديو...</div>
-                ) : blobUrl ? (
-                    <video controls src={blobUrl} style={{ width: '100%', maxHeight: '60vh', borderRadius: 12, background: '#000' }} />
+                fileUrl ? (
+                    <video controls src={fileUrl} style={{ width: '100%', maxHeight: '60vh', borderRadius: 12, background: '#000' }} />
                 ) : null
             )}
 
             {item.content_type === 'document' && (
-                loading ? (
-                    <div style={{ textAlign: 'center', padding: '60px 0', color: 'rgba(255,255,255,0.4)' }}>جارٍ تحميل المستند...</div>
-                ) : blobUrl ? (
+                fileUrl ? (
                     item.mime_type === 'application/pdf' ? (
-                        <embed src={blobUrl} type="application/pdf" width="100%" height="500" style={{ borderRadius: 12, maxHeight: '70vh' }} />
+                        <embed src={fileUrl} type="application/pdf" width="100%" height="500" style={{ borderRadius: 12, maxHeight: '70vh' }} />
                     ) : (
-                        <a href={blobUrl} download className="btn-outline" style={{ padding: '10px 22px', fontSize: 14 }}>
+                        <a href={fileUrl} download className="btn-outline" style={{ padding: '10px 22px', fontSize: 14 }}>
                             ⬇ تحميل الملف
                         </a>
                     )

@@ -21,10 +21,6 @@ export type StoredSelection =
     | { kind: 'peer'; id: string }
     | { kind: 'session'; id: string }
 
-// أدابتر تخزين قابل للاستبدال — الحاوي (مثلاً صفحة تستخدم useSearchParams)
-// فيه يمرر أدابتر يخزّن الاختيار بالـ URL بدل sessionStorage، فيصير رابط
-// قابل للمشاركة ويصمد أمام F5. إذا ما انمرر أدابتر، منرجع لنفس السلوك
-// القديم (sessionStorage) للحفاظ على التوافق.
 export interface PlayerSelectionStorage {
     get: () => StoredSelection | null
     set: (sel: StoredSelection) => void
@@ -48,7 +44,7 @@ export function useCoursePlayer(courseId: string, storage?: PlayerSelectionStora
             try {
                 sessionStorage.setItem(SELECTION_STORAGE_KEY, JSON.stringify(sel))
             } catch {
-                // بيئات بدون sessionStorage (نادر) — نتجاهل بأمان
+                // ignore
             }
         },
     }
@@ -67,66 +63,49 @@ export function useCoursePlayer(courseId: string, storage?: PlayerSelectionStora
     const [loadingUnitIds, setLoadingUnitIds] = useState<Set<string>>(new Set())
 
     const [selection, setSelection] = useState<PlayerSelection | null>(null)
-    const [contentBlobUrl, setContentBlobUrl] = useState<string | null>(null)
-    const [contentLoading, setContentLoading] = useState(false)
+    const [contentFileUrl, setContentFileUrl] = useState<string | null>(null)
     const [marking, setMarking] = useState(false)
 
-    const blobUrlRef = useRef<string | null>(null)
     const hasAutoSelectedRef = useRef(false)
 
-    const revokeCurrentBlob = () => {
-        if (blobUrlRef.current) { URL.revokeObjectURL(blobUrlRef.current); blobUrlRef.current = null }
-    }
-
-    // ---------- حفظ الاختيار عبر الأدابتر (URL من الحاوي، أو sessionStorage احتياطًا) ----------
+    // ---------- حفظ الاختيار عبر الأدابتر ----------
     const persistSelection = (sel: StoredSelection) => {
-
         selectionStorage.set(sel)
     }
 
     // ---------- Selection: content (with unitId) ----------
     const selectContentItem = useCallback(async (item: ContentItem, unitId: string) => {
-        revokeCurrentBlob()
-        setContentBlobUrl(null)
+        // Set selection and persist
         setSelection({ kind: 'content', item })
         persistSelection({ kind: 'content', id: item._id, unitId })
 
+        // Generate direct file URL for streaming (no blob fetch)
         if (item.content_type === 'video' || item.content_type === 'document') {
-            setContentLoading(true)
-            try {
-                const blob = await courseService.getContentFileBlob(courseId, item._id)
-                const url = URL.createObjectURL(blob)
-                blobUrlRef.current = url
-                setContentBlobUrl(url)
-            } catch (err) {
-                toastError(getErrorMessage(err))
-            } finally {
-                setContentLoading(false)
-            }
+            const url = courseService.getContentFileUrl(courseId, item._id)
+            setContentFileUrl(url)
+        } else {
+            setContentFileUrl(null)
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [courseId])
 
     const selectQuizItem = (quiz: StudentQuizSummary) => {
-        revokeCurrentBlob()
-        setContentBlobUrl(null)
+        setContentFileUrl(null)
         setSelection({ kind: 'quiz', quiz })
         persistSelection({ kind: 'quiz', id: quiz._id })
     }
 
     const selectPeerItem = (assignment: PeerAssignment) => {
-        revokeCurrentBlob()
-        setContentBlobUrl(null)
+        setContentFileUrl(null)
         setSelection({ kind: 'peer', assignment })
         persistSelection({ kind: 'peer', id: assignment._id })
     }
 
     const selectSessionItem = (session: LiveSession) => {
-        revokeCurrentBlob()
-        setContentBlobUrl(null)
+        setContentFileUrl(null)
         setSelection({ kind: 'session', session })
         persistSelection({ kind: 'session', id: session._id })
     }
+
     // ---------- Lazy unit content loading ----------
     const expandUnit = useCallback(async (unitId: string, currentUnits?: PlayerUnit[]) => {
         setExpandedUnitIds(prev => new Set(prev).add(unitId))
@@ -150,7 +129,6 @@ export function useCoursePlayer(courseId: string, storage?: PlayerSelectionStora
         } finally {
             setLoadingUnitIds(prev => { const next = new Set(prev); next.delete(unitId); return next })
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [courseId, units, selectContentItem])
 
     const toggleUnit = (unitId: string) => {
@@ -161,7 +139,7 @@ export function useCoursePlayer(courseId: string, storage?: PlayerSelectionStora
         }
     }
 
-    // ---------- Restore selection from sessionStorage ----------
+    // ---------- Restore selection from storage ----------
     const restoreSelection = useCallback(async (
         unitList: PlayerUnit[],
         availableQuizzes: StudentQuizSummary[],
@@ -199,6 +177,7 @@ export function useCoursePlayer(courseId: string, storage?: PlayerSelectionStora
             selectSessionItem(found)
             return true
         }
+
         // kind === 'content'
         const unitExists = unitList.some(u => u._id === stored.unitId)
         if (!unitExists) return false
@@ -216,11 +195,11 @@ export function useCoursePlayer(courseId: string, storage?: PlayerSelectionStora
             }
             return false
         } catch {
-            return false // فشل الاسترجاع — سيعود للسلوك الافتراضي (أول وحدة)
+            return false
         } finally {
             setLoadingUnitIds(prev => { const next = new Set(prev); next.delete(stored.unitId); return next })
         }
-    }, [SELECTION_STORAGE_KEY, courseId, expandUnit, selectContentItem, selectQuizItem, selectPeerItem])
+    }, [courseId, expandUnit, selectContentItem, selectQuizItem, selectPeerItem])
 
     // ---------- Initial load ----------
     const loadCourse = useCallback(async () => {
@@ -269,7 +248,6 @@ export function useCoursePlayer(courseId: string, storage?: PlayerSelectionStora
             setLiveSessions(filteredLiveSessions)
             setProgressPercentage(progress?.progress_percentage ?? 0)
 
-            // محاولة استعادة الاختيار المحفوظ، وإلا التحديد التلقائي لأول محتوى
             const restored = await restoreSelection(unitList, availableQuizzes, filteredPeerAssignments, filteredLiveSessions)
             if (!restored && unitList.length > 0) {
                 await expandUnit(unitList[0]._id, unitList)
@@ -279,7 +257,6 @@ export function useCoursePlayer(courseId: string, storage?: PlayerSelectionStora
         } finally {
             setLoading(false)
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [courseId, restoreSelection, expandUnit])
 
     const refreshLiveSessions = useCallback(async () => {
@@ -288,14 +265,13 @@ export function useCoursePlayer(courseId: string, storage?: PlayerSelectionStora
             const extractCourseId = (c: LiveSession['courseId']) => String(typeof c === 'object' ? c._id : c)
             setLiveSessions(all.filter(s => extractCourseId(s.courseId) === String(courseId)))
         } catch {
-            // تجاهل — فشل تحديث بسيط لا يجب أن يكسر تجربة الطالب
+            // ignore
         }
     }, [courseId])
+
     useEffect(() => {
         hasAutoSelectedRef.current = false
         void loadCourse()
-        return () => revokeCurrentBlob()
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [courseId])
 
     // ---------- Mark content complete ----------
@@ -320,24 +296,22 @@ export function useCoursePlayer(courseId: string, storage?: PlayerSelectionStora
         }
     }
 
-    // ---------- بعد إرسال اختبار ----------
     const refreshAfterQuiz = useCallback(async () => {
         try {
             const progress = await courseService.getProgressSummary(courseId)
             setProgressPercentage(progress?.progress_percentage ?? 0)
         } catch {
-            // تجاهل — فشل تحديث بسيط لا يجب أن يكسر عرض نتيجة الاختبار
+            // ignore
         }
     }, [courseId])
 
-    // ---------- بعد أي تغيير بمهمة مراجعة جماعية (تسليم/مراجعة/اكتمال) ----------
     const refreshAfterPeerChange = useCallback(async () => {
         try {
             const [all, progress] = await Promise.all([peerService.listAssignments(), courseService.getProgressSummary(courseId)])
             setPeerAssignments(all.filter(a => String(typeof a.courseId === 'object' ? a.courseId._id : a.courseId) === String(courseId)))
             setProgressPercentage(progress?.progress_percentage ?? 0)
         } catch {
-            // تجاهل — فشل تحديث بسيط لا يجب أن يكسر تجربة الطالب
+            // ignore
         }
     }, [courseId])
 
@@ -354,8 +328,7 @@ export function useCoursePlayer(courseId: string, storage?: PlayerSelectionStora
         loadingUnitIds,
         toggleUnit,
         selection,
-        contentBlobUrl,
-        contentLoading,
+        contentFileUrl,          // ← changed from contentBlobUrl
         selectContentItem,
         selectQuizItem,
         selectPeerItem,

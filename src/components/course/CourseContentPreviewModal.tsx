@@ -90,8 +90,7 @@ export function CourseContentPreviewModal({ courseId, viewerRole, onClose }: Pro
                                                         unit.content.map(item => {
                                                             const isExpanded = contentPreview.expandedId === item._id
                                                             const needsBlob = item.content_type === 'video' || item.content_type === 'document'
-                                                            const blobUrl = contentPreview.blobUrls[item._id]
-                                                            const isLoadingBlob = contentPreview.loadingId === item._id
+                                                            const fileUrl = contentPreview.fileUrls[item._id]
                                                             return (
                                                                 <div key={item._id} style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
                                                                     <div
@@ -103,15 +102,13 @@ export function CourseContentPreviewModal({ courseId, viewerRole, onClose }: Pro
                                                                     </div>
                                                                     {isExpanded && (
                                                                         <div style={{ padding: '10px 14px', background: 'rgba(255,255,255,0.02)' }}>
-                                                                            {isLoadingBlob ? (
-                                                                                <span style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.4)' }}>جارٍ التحميل...</span>
-                                                                            ) : item.content_type === 'video' && blobUrl ? (
-                                                                                <video controls src={blobUrl} style={{ width: '100%', maxHeight: 260, borderRadius: 8 }} />
-                                                                            ) : item.content_type === 'document' && blobUrl ? (
+                                                                            {item.content_type === 'video' && fileUrl ? (
+                                                                                <video controls src={fileUrl} style={{ width: '100%', maxHeight: 260, borderRadius: 8 }} />
+                                                                            ) : item.content_type === 'document' && fileUrl ? (
                                                                                 item.mime_type === 'application/pdf' ? (
-                                                                                    <embed src={blobUrl} type="application/pdf" width="100%" height="320" />
+                                                                                    <embed src={fileUrl} type="application/pdf" width="100%" height="320" />
                                                                                 ) : (
-                                                                                    <a href={blobUrl} download style={{ color: '#a855f7', fontSize: 13 }}>⬇ تحميل الملف</a>
+                                                                                    <a href={fileUrl} download style={{ color: '#a855f7', fontSize: 13 }}>⬇ تحميل الملف</a>
                                                                                 )
                                                                             ) : item.content_type === 'link' ? (
                                                                                 <a href={item.content_data?.url} target="_blank" rel="noreferrer" style={{ color: '#a855f7', fontSize: 13 }}>{item.content_data?.url}</a>
