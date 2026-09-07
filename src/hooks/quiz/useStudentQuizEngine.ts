@@ -28,7 +28,23 @@ export function useStudentQuizEngine(quiz: StudentQuizSummary, onCompleted?: () 
             ; (data.previous_answers || []).forEach(a => { map[a.question_id] = a.selected_choice_id })
         setAnswers(map)
         setCurrentIndex(0)
-        const remaining = Math.max(0, Math.floor((new Date(data.expires_at).getTime() - Date.now()) / 1000))
+        // نحسب الفارق بناءً على وقت الخادم وليس وقت جهاز الطالب، لتفادي
+        // مشاكل عدم تطابق ساعة الجهاز (clock skew) التي كانت تُسقط الوقت
+        // المتبقي إلى صفر بصمت وتُفعّل الإرسال التلقائي فوراً.
+        const serverNow = new Date(data.server_time).getTime()
+        const remaining = Math.floor((new Date(data.expires_at).getTime() - serverNow) / 1000)
+
+        if (remaining <= 0) {
+            // هذا يعني أن المحاولة منتهية فعلياً من وجهة نظر الخادم (حالة نادرة وحقيقية)
+            // وليس خطأ ساعة جهاز — لذلك نرسلها كـ auto-submit حقيقي، لكن بشكل واعٍ وليس صامتاً
+            setAttempt(data)
+            setTimeRemaining(0)
+            setState('in_progress')
+            showToast('انتهى الوقت المسموح لهذه المحاولة. جارٍ إرسال إجاباتك...', 'warning')
+            void submitQuiz(true)
+            return
+        }
+
         setTimeRemaining(remaining)
         setState('in_progress')
     }

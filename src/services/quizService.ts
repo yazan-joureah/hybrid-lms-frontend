@@ -68,6 +68,7 @@ export interface AttemptQuestion { _id: string; text: string; choices: AttemptCh
 export interface ActiveAttempt {
     attempt_id: string
     expires_at: string
+    server_time: string
     quiz: { _id: string; title: string; questions: AttemptQuestion[] }
     previous_answers?: { question_id: string; selected_choice_id: string }[]
 }
