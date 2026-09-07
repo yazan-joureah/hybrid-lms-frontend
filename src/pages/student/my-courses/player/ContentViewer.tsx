@@ -8,11 +8,12 @@ const TYPE_LABELS: Record<ContentItem['content_type'], string> = {
 interface Props {
     item: ContentItem
     fileUrl: string | null
+    loading: boolean
     marking: boolean
     onMarkComplete: () => void
 }
 
-export function ContentViewer({ item, fileUrl, marking, onMarkComplete }: Props) {
+export function ContentViewer({ item, fileUrl, loading, marking, onMarkComplete }: Props) {
     return (
         <div style={{ background: 'var(--bg-card)', backdropFilter: 'blur(20px)', border: '1px solid var(--border)', borderRadius: 18, padding: 24, minHeight: 420 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
@@ -31,7 +32,9 @@ export function ContentViewer({ item, fileUrl, marking, onMarkComplete }: Props)
             </div>
 
             {item.content_type === 'video' && (
-                fileUrl ? (
+                loading ? (
+                    <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>جارٍ تجهيز الفيديو...</div>
+                ) : fileUrl ? (
                     <video controls src={fileUrl} style={{ width: '100%', maxHeight: '60vh', borderRadius: 12, background: '#000' }} />
                 ) : null
             )}

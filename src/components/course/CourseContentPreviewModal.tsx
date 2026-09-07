@@ -102,7 +102,9 @@ export function CourseContentPreviewModal({ courseId, viewerRole, onClose }: Pro
                                                                     </div>
                                                                     {isExpanded && (
                                                                         <div style={{ padding: '10px 14px', background: 'rgba(255,255,255,0.02)' }}>
-                                                                            {item.content_type === 'video' && fileUrl ? (
+                                                                            {contentPreview.loadingId === item._id ? (
+                                                                                <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.4)' }}>جارٍ التحضير...</div>
+                                                                            ) : item.content_type === 'video' && fileUrl ? (
                                                                                 <video controls src={fileUrl} style={{ width: '100%', maxHeight: 260, borderRadius: 8 }} />
                                                                             ) : item.content_type === 'document' && fileUrl ? (
                                                                                 item.mime_type === 'application/pdf' ? (

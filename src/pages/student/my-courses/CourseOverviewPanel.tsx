@@ -124,6 +124,7 @@ export function CourseOverviewPanel({ enrollment, onBack }: Props) {
                             <ContentViewer
                                 item={player.selection.item}
                                 fileUrl={player.contentFileUrl}
+                                loading={player.contentFileLoading}
                                 marking={player.marking}
                                 onMarkComplete={player.markActiveComplete}
                             />

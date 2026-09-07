@@ -64,11 +64,15 @@ export function useCoursePlayer(courseId: string, storage?: PlayerSelectionStora
 
     const [selection, setSelection] = useState<PlayerSelection | null>(null)
     const [contentFileUrl, setContentFileUrl] = useState<string | null>(null)
+    const [contentFileLoading, setContentFileLoading] = useState(false)
     const [marking, setMarking] = useState(false)
 
     const hasAutoSelectedRef = useRef(false)
+    // DEVIATION: holds the ID of the last content item for which a stream ticket was requested.
+    // Used to ignore stale network responses for items no longer selected (Race Condition Guard).
+    const activeContentRequestRef = useRef<string | null>(null)
 
-    // ---------- حفظ الاختيار عبر الأدابتر ----------
+    // ---------- Persist selection ----------
     const persistSelection = (sel: StoredSelection) => {
         selectionStorage.set(sel)
     }
@@ -79,29 +83,55 @@ export function useCoursePlayer(courseId: string, storage?: PlayerSelectionStora
         setSelection({ kind: 'content', item })
         persistSelection({ kind: 'content', id: item._id, unitId })
 
-        // Generate direct file URL for streaming (no blob fetch)
+        // SECURITY: getContentFileUrl now calls the protected /stream-ticket endpoint (SF-COURSE-03)
+        // over the network, then builds the <video>/<embed> URL with a narrow-scoped ticket
+        // instead of leaking the real Access Token in the URL.
         if (item.content_type === 'video' || item.content_type === 'document') {
-            const url = courseService.getContentFileUrl(courseId, item._id)
-            setContentFileUrl(url)
-        } else {
+            activeContentRequestRef.current = item._id
             setContentFileUrl(null)
+            setContentFileLoading(true)
+            try {
+                const url = await courseService.getContentFileUrl(courseId, item._id)
+                // Race Condition Guard: only set the URL if this item is still the active one.
+                if (activeContentRequestRef.current === item._id) {
+                    setContentFileUrl(url)
+                }
+            } catch (err) {
+                if (activeContentRequestRef.current === item._id) {
+                    toastError(getErrorMessage(err))
+                }
+            } finally {
+                if (activeContentRequestRef.current === item._id) {
+                    setContentFileLoading(false)
+                }
+            }
+        } else {
+            activeContentRequestRef.current = null
+            setContentFileUrl(null)
+            setContentFileLoading(false)
         }
-    }, [courseId])
+    }, [courseId, toastError])
 
     const selectQuizItem = (quiz: StudentQuizSummary) => {
+        activeContentRequestRef.current = null
         setContentFileUrl(null)
+        setContentFileLoading(false)
         setSelection({ kind: 'quiz', quiz })
         persistSelection({ kind: 'quiz', id: quiz._id })
     }
 
     const selectPeerItem = (assignment: PeerAssignment) => {
+        activeContentRequestRef.current = null
         setContentFileUrl(null)
+        setContentFileLoading(false)
         setSelection({ kind: 'peer', assignment })
         persistSelection({ kind: 'peer', id: assignment._id })
     }
 
     const selectSessionItem = (session: LiveSession) => {
+        activeContentRequestRef.current = null
         setContentFileUrl(null)
+        setContentFileLoading(false)
         setSelection({ kind: 'session', session })
         persistSelection({ kind: 'session', id: session._id })
     }
@@ -328,7 +358,8 @@ export function useCoursePlayer(courseId: string, storage?: PlayerSelectionStora
         loadingUnitIds,
         toggleUnit,
         selection,
-        contentFileUrl,          // ← changed from contentBlobUrl
+        contentFileUrl,
+        contentFileLoading,
         selectContentItem,
         selectQuizItem,
         selectPeerItem,
