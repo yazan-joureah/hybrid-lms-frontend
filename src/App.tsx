@@ -314,7 +314,7 @@ function AppShell() {
             <Route path="/instructor" element={instructorRoute(<InstructorDashboard />)} />
             <Route path="/instructor/setup" element={<Layout><InstructorSetup /></Layout>} />
             <Route path="/instructor/courses" element={instructorRoute(<CourseBuilder />)} />
-            <Route path="/instructor/ai-assistant'" element={instructorRoute(<InstructorAIAssistant />)} />
+            <Route path="/instructor/ai-assistant" element={instructorRoute(<InstructorAIAssistant />)} />
 
             <Route path="*" element={<Navigate to={fallbackPathForRole(role)} replace />} />
           </>
