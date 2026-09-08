@@ -28,6 +28,7 @@ export const PAGE_TO_PATH: Record<Exclude<Page, 'verify-certificate'>, string> &
     'instructor-dashboard': '/instructor',
     'instructor-setup': '/instructor/setup',
     'course-builder': '/instructor/courses',
+    'instructor-ai-assistant': '/instructor/ai-assistant',
 
     'admin-dashboard': '/admin',
     'admin-setup': '/admin/setup',
