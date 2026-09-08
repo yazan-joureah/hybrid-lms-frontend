@@ -39,6 +39,7 @@ import AdminAccounts from './pages/admin/AdminAccounts'
 import AdminSetup from './pages/admin/AdminSetup'
 import AdminRefundReview from './pages/payments/admin/AdminRefundReview'
 import PrivacyPolicy from './pages/PrivacyPolicy'
+import InstructorAIAssistant from './pages/instructor/AIAssistant'
 
 // --------- Route wrappers لاستخراج params من الـ URL الحقيقي ----------
 function VerifyCertificateRoute() {
@@ -313,6 +314,7 @@ function AppShell() {
             <Route path="/instructor" element={instructorRoute(<InstructorDashboard />)} />
             <Route path="/instructor/setup" element={<Layout><InstructorSetup /></Layout>} />
             <Route path="/instructor/courses" element={instructorRoute(<CourseBuilder />)} />
+            <Route path="/instructor/ai-assistant'" element={instructorRoute(<InstructorAIAssistant />)} />
 
             <Route path="*" element={<Navigate to={fallbackPathForRole(role)} replace />} />
           </>
