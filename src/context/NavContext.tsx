@@ -10,7 +10,7 @@ export type Page =
   | 'live-class' | 'certificates' | 'ai-assistant' | 'profile'
   | 'checkout' | 'payment-success' | 'payment-cancelled'
   | 'admin-payments' | 'admin-accounts' | 'admin-payment-detail'
-  | 'instructor-dashboard' | 'instructor-setup' | 'course-builder'
+  | 'instructor-dashboard' | 'instructor-setup' | 'course-builder' | 'instructor-ai-assistant'
   | 'admin-dashboard' | 'admin-setup' | 'admin-dashboard' | 'refunds' | 'privacy-policy'
 
 interface NavContextType {

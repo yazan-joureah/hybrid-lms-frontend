@@ -19,6 +19,7 @@ const InstructorNav = [
 
 const AdminSetupNav = [
   { icon: '🚀', label: 'إكمال الإعداد (2FA)', page: 'admin-setup' },
+  { icon: '🤖', label: 'المساعد الذكي', page: 'instructor-ai-assistant' },
   { icon: '⚙️', label: 'الإعدادات', page: 'profile' },
 ] as const
 
