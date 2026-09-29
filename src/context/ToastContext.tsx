@@ -47,15 +47,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         timers.current[id] = setTimeout(() => dismiss(id), duration)
     }, [dismiss])
 
-    // ⚠️ مهم جداً: success/error/info/warning لازم يكون لهن مرجع (reference)
-    // ثابت بين الـ renders. لو عرّفناهن inline جوا الـ value object العادي،
-    // كل مرة الـ ToastProvider يعمل re-render (مثلاً بسبب setToasts نفسها)
-    // بيتولد مرجع دالة جديد لكل واحدة، وأي useEffect بصفحة تانية حاطط
-    // toastError/toastSuccess بمصفوفة الاعتماديات (deps array) رح يشوفها
-    // "تغيّرت" ويعيد التنفيذ من جديد → لو الـ effect نفسه بينادي toastError
-    // بحالة الفشل (زي أي catch block)، هاد بيعمل حلقة لا نهائية:
-    // fetch يفشل → toast → re-render → مرجع جديد → effect يعيد نفسه → fetch
-    // يفشل من جديد... (شفنا هالضبط بـ AdminPaymentDetail.tsx).
+   
     const success = useCallback((m: string, d?: number) => showToast(m, 'success', d), [showToast])
     const error = useCallback((m: string, d?: number) => showToast(m, 'error', d), [showToast])
     const info = useCallback((m: string, d?: number) => showToast(m, 'info', d), [showToast])

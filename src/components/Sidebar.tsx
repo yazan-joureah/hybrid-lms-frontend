@@ -24,14 +24,13 @@ const AdminSetupNav = [
 ] as const
 
 
-// عناصر محدودة تُعرض للمدرّس لحد ما يكمّل KYC/MFA — بس صفحة الإعداد والملف الشخصي
+
 const InstructorSetupNav = [
   { icon: '🚀', label: 'إكمال الإعداد', page: 'instructor-setup' },
   { icon: '⚙️', label: 'الإعدادات', page: 'profile' },
 ] as const
 
-// قائمة الأدمن — KYC ومراجعة الكورسات صاروا تبويبات داخل AdminDashboard نفسها
-// (وليسوا صفحات/Routes منفصلة)، فما بنحطهم كروابط Sidebar مستقلة
+
 const AdminNav = [
   { icon: '⊞', label: 'لوحة التحكم', page: 'admin-dashboard' },
   { icon: '👥', label: 'إدارة الحسابات', page: 'admin-accounts' },

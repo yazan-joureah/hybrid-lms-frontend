@@ -6,8 +6,7 @@ const CONTENT_TYPE_LABELS: Record<ContentFormInput['contentType'], string> = {
     video: '🎥 فيديو', document: '📄 مستند', link: '🔗 رابط', text: '📝 نص',
 }
 
-// قصّ آمن عند أقرب فراغ قبل الحد الأقصى — يتجنّب مشكلة قطع الكلمات في
-// المنتصف التي تسبّبها -webkit-line-clamp مع نص عربي/لاتيني مختلط الاتجاه
+
 function truncateDesc(text: string, maxLen = 150) {
     if (text.length <= maxLen) return text
     const cut = text.slice(0, maxLen)

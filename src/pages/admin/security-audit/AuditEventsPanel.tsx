@@ -6,10 +6,7 @@ function formatDateTime(dateStr: string) {
     return new Intl.DateTimeFormat('ar-EG', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(dateStr))
 }
 
-// يصنّف خطورة الحدث اعتماداً فقط على نمط التسمية الموحّد المستخدم فعلياً
-// عبر auditService.record(action: '...') بكل الموديولات (مثال:
-// UNAUTHORIZED_QUIZ_CREATE_ATTEMPT، QUIZ_ATTEMPT_AUTO_SUBMITTED) — بلا
-// أي حاجة لحقل severity جديد من الباك-إند.
+
 type Severity = 'critical' | 'warning' | 'normal'
 function classifyAction(action: string): Severity {
     if (/UNAUTHORIZED|DENIED|LOCKED|FORBIDDEN/.test(action)) return 'critical'

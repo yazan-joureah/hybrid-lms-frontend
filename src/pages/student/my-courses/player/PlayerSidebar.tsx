@@ -16,8 +16,7 @@ const SESSION_STATUS_META: Record<LiveSession['status'], { label: string; color:
     cancelled: { label: 'ملغاة', color: '#64748b' },
 }
 
-// قصّ آمن عند أقرب فراغ قبل الحد الأقصى — يتجنّب مشكلة قطع الكلمات في
-// المنتصف التي تسبّبها -webkit-line-clamp مع نص عربي/لاتيني مختلط الاتجاه
+
 function truncateDesc(text: string, maxLen = 130) {
     if (text.length <= maxLen) return text
     const cut = text.slice(0, maxLen)

@@ -1,13 +1,9 @@
 // src/context/AuthApiContext.tsx
-//
-// هذا Context منفصل تمامًا عن NavContext — مسؤوليته الوحيدة هي التواصل
-// مع الباك (login/register/verify/reset/google...). لا يلمس أي state تابع
-// للتنقل أو بيانات المستخدم المحلية — هذه تبقى مسؤولية NavContext كما هي.
-//
+
 import { createContext, useContext, useState, type ReactNode } from 'react'
 import API, { BASE_URL } from '../config/api'
 import type { Page } from './NavContext'
-import { userService } from '../services/userService' // ✅ استيراد userService
+import { userService } from '../services/userService' 
 
 export interface RegisterPayload {
   full_name: string
@@ -23,11 +19,11 @@ export interface UpdateProfilePayload {
   full_name?: string
   phone?: string
   bio?: string
-  birth_date?: string // ISO string — يُرفض بـ BIRTH_DATE_LOCKED إذا kyc_status === 'verified'
+  birth_date?: string 
 }
 
 export interface AccountDeletionResult {
-  immediate: boolean   // true = طالب (حذف فوري) | false = مدرّس (بانتظار مراجعة SuperAdmin)
+  immediate: boolean   
   status: string
   requestId?: string
 }
@@ -85,12 +81,12 @@ interface AuthApiContextType {
   resendVerification: (email: string) => Promise<void>
   forgotPassword: (email: string) => Promise<void>
   resetPassword: (email: string, code: string, newPassword: string) => Promise<void>
-  // Google OAuth
+
   googleLogin: () => void
   googleRegisterConfirm: (token: string, birthDate: string, role: 'Student' | 'Instructor') => Promise<{ user?: BackendUser; requiresGuardianEmail?: boolean; guardianPendingToken?: string }>
   googleLinkConfirm: (token: string, password: string) => Promise<{ user?: BackendUser }>
   googleGuardianEmail: (token: string, guardianEmail: string) => Promise<void>
-  // Guardian management (new)
+  
   guardianManageStatus: (token: string) => Promise<{
     status: 'pending' | 'approved' | 'rejected' | 'expired'
     guardianEmail: string
@@ -100,7 +96,7 @@ interface AuthApiContextType {
   }>
   guardianManageResend: (token: string) => Promise<{ resendCount: number }>
   guardianManageUpdateEmail: (token: string, guardianEmail: string) => Promise<{ guardianEmail: string }>
-  // Guardian decision (المُوافقة الفعلية على الطلب — SF مختلفة عن guardianManage أعلاه)
+  
   guardianApprove: (params: {
     token: string
     decision: 'approve' | 'decline'
@@ -108,10 +104,10 @@ interface AuthApiContextType {
     relationship: 'parent' | 'guardian'
     consent?: boolean
   }) => Promise<{ status: 'active' | 'guardian_pending'; message: string }>
-  // استعادة الجلسة
+  
   restoreSession: () => Promise<{ success: boolean; user?: BackendUser }>
   setPendingMfaToken: (token: string) => void
-  // Profile & Account
+  
   uploadProfilePicture: (file: File) => Promise<void>
   getProfilePictureUrl: (userId: string) => string
   submitKyc: (params: { idDocumentType: 'national_id' | 'passport'; idDocumentFile: File; selfieFile: File }) => Promise<void>
@@ -125,7 +121,7 @@ const AuthApiContext = createContext<AuthApiContextType | undefined>(undefined)
 export function AuthApiProvider({ children }: { children: ReactNode }) {
   const [mfaTempToken, setMfaTempToken] = useState<string | null>(null)
 
-  // ✅ استخدام userService بدلاً من API.get مباشرة
+  
   const fetchProfile = async (): Promise<BackendUser> => {
     return userService.getMe() as unknown as BackendUser
   }
@@ -185,13 +181,13 @@ export function AuthApiProvider({ children }: { children: ReactNode }) {
     try {
       await API.post('/auth/logout')
     } catch {
-      // نكمل تنظيف الفرونت حتى لو فشل الطلب
+      
     }
     localStorage.removeItem('session_active')
     delete API.defaults.headers.common.Authorization
     setMfaTempToken(null)
 
-    // تنظيف أي أثر لآخر كورس/تسجيل
+    
     try {
       sessionStorage.removeItem('selected_enrollment_id')
       const keysToRemove: string[] = []
@@ -201,7 +197,7 @@ export function AuthApiProvider({ children }: { children: ReactNode }) {
       }
       keysToRemove.forEach(key => sessionStorage.removeItem(key))
     } catch {
-      // تجاهل
+      
     }
   }
 
@@ -309,9 +305,7 @@ export function AuthApiProvider({ children }: { children: ReactNode }) {
   }
 
   // ---------- Guardian decision (approve/decline the request itself) ----------
-  // SECURITY: consent يُرسَل فقط عند decision='approve' — السيرفر
-  // (guardianApproveSchema) يشترطه true حصراً في تلك الحالة، وإرساله
-  // false/undefined عند الرفض قد يُربك المخطط بلا داعٍ.
+  
   const guardianApprove: AuthApiContextType['guardianApprove'] = async ({
     token, decision, guardianFullName, relationship, consent,
   }) => {
@@ -326,7 +320,7 @@ export function AuthApiProvider({ children }: { children: ReactNode }) {
     return { status: data?.status, message: data?.message }
   }
 
-  // ---------- استعادة الجلسة ----------
+  
   const restoreSession: AuthApiContextType['restoreSession'] = async () => {
     try {
       const res = await API.post('/auth/refresh')
@@ -366,16 +360,13 @@ export function AuthApiProvider({ children }: { children: ReactNode }) {
     await API.post('/kyc/requests', formData)
   }
 
-  // ⚠️ افتراض غير مؤكد: بافترض إنه updateProfileSchema (userSchemas.js) بيقبل
-  // full_name/phone/bio/birth_date كلها اختيارية (partial update) — لازم تأكيد
-  // من محتوى userSchemas.js الفعلي لو صار عندك اختلاف بالسلوك.
+ 
   const updateProfile: AuthApiContextType['updateProfile'] = async (payload) => {
     const res = await API.patch('/users/me', payload)
     return res.data?.data
   }
 
-  // ⚠️ افتراض غير مؤكد: requestOwnDeletionSchema (authSchemas.js) — بنرسل دايمًا
-  // نص غير فارغ لـ reason تجنبًا لفشل التحقق لو كان الحقل إلزامي بالسكيما.
+
   const requestAccountDeletion: AuthApiContextType['requestAccountDeletion'] = async (reason) => {
     const res = await API.delete('/auth/account', {
       data: { reason: reason?.trim() || 'لم يتم تحديد سبب من المستخدم.' },

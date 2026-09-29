@@ -61,12 +61,12 @@ export function useCourseUnits(courseId: string | null) {
         if (targetIndex < 0 || targetIndex >= units.length) return
         const reordered = [...units]
             ;[reordered[index], reordered[targetIndex]] = [reordered[targetIndex], reordered[index]]
-        setUnits(reordered) // تحديث متفائل فوري
+        setUnits(reordered) 
         try {
             await courseService.reorderUnits(courseId, reordered.map(u => u._id))
         } catch (err) {
             toastError(getErrorMessage(err))
-            fetchUnits() // تراجع عند الفشل
+            fetchUnits() 
         }
     }
 

@@ -4,8 +4,7 @@ import API from '../config/api'
 export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded'
 export type RefundStatus = 'review_pending' | 'approved' | 'rejected'
 
-// عملة المنصة موحّدة (env.payment.currency بالباك) — ما في سعر لكل كورس بعملة
-// مختلفة، فمنستخدمها كـ fallback بصفحة Checkout قبل ما يصير في Payment فعلي
+
 export const PLATFORM_CURRENCY = 'usd'
 
 export function formatCurrency(amount: number, currency: string = PLATFORM_CURRENCY): string {
@@ -33,11 +32,11 @@ export interface RefundRequestRef {
     decision_reason?: string | null
 }
 
-// ⚠️ مطابق حرفياً لـ Payment.js — لا يوجد حقل provider، ولا حالة processing
+
 export interface Payment {
     _id: string
-    student_id: PaymentStudentRef | string | null   // populated فقط بردود الأدمن
-    course_id: PaymentCourseRef | string | null      // ممكن null لو الكورس انحذف
+    student_id: PaymentStudentRef | string | null   
+    course_id: PaymentCourseRef | string | null      
     enrollment_id: string
     amount: number
     currency: string
@@ -50,10 +49,7 @@ export interface Payment {
     refund_request?: RefundRequestRef | null
 }
 
-// ⚠️ نستخدم هالـ helpers بدل `typeof x === 'object'` مباشرة بأي مكان —
-// typeof null === 'object' بجافاسكريبت، فالفحص المباشر بينكرش لو الباك
-// رجّع course_id/student_id = null (كورس أو مستخدم محذوف، أو payment قديم
-// قبل استقرار الـ populate). هاي الدوال بتتعامل مع null بأمان بمكان واحد.
+
 export function getCourseTitle(course: Payment['course_id']): string {
     if (course && typeof course === 'object') return course.title || '—'
     return typeof course === 'string' && course ? course : '—'
@@ -69,7 +65,7 @@ export function getStudentEmail(student: Payment['student_id']): string | undefi
     return undefined
 }
 
-// باقي الـ interfaces والـ service object...
+
 
 export interface RefundRequestListItem {
     _id: string

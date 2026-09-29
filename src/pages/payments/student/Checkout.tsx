@@ -9,14 +9,10 @@ import { payService, formatCurrency } from '../../../services/payService'
 import { getErrorMessage } from '../../../utils/errorMessages'
 import { SkeletonLoader } from '../../../components/common/Loading'
 
-// مفتاح تخزين مؤقت لتمرير enrollmentId لصفحة الدفع — نظام التنقل هون
-// (NavContext) ما بيدعم route params متل react-router، فبنتّبع نفس نمط
-// SELECTED_ENROLLMENT_KEY الموجود أصلاً بـ MyCourses.tsx
+
 export const CHECKOUT_ENROLLMENT_KEY = 'checkout_enrollment_id'
 
-// ⚠️ افتراض غير مؤكد (متل نفس أسلوب التعليقات بـ AuthApiContext.tsx):
-// بافترض إنو صورة الغلاف متاحة عبر GET مباشر (زي getProfilePictureUrl)
-// مش عبر blob محمي بـ Authorization header. لازم تأكيد من الباك قبل الاعتماد.
+
 const getCourseCoverUrl = (courseId: string) => `${BASE_URL}/courses/${courseId}/cover-image`
 
 export default function Checkout() {
@@ -68,13 +64,10 @@ export default function Checkout() {
         if (!enrollment) return
         setRedirecting(true)
         try {
-            // ⚠️ نرسل فقط enrollment._id — الباك هو من يحسب السعر من الكورس
-            // مباشرة. لا يوجد أي amount/price يُرسل من الفرونت هون، وهاد مقصود
-            // ومهم أمنياً (لمنع التلاعب بالسعر من طرف العميل).
+            
             const result = await payService.initiatePayment(enrollment._id)
             if (result?.checkoutUrl) {
-                // مغادرة فعلية لموقعنا نحو صفحة الدفع الآمنة تبع Stripe —
-                // ما بنتعامل مع بيانات البطاقة إطلاقاً داخل تطبيقنا (PCI DSS)
+                
                 window.location.href = result.checkoutUrl
             } else {
                 throw new Error('NO_CHECKOUT_URL')

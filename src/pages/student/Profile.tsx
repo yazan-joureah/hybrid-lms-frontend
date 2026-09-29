@@ -86,18 +86,18 @@ export default function Profile() {
   const [kycError, setKycError] = useState('')
   const [latestRejectionReason, setLatestRejectionReason] = useState<string | null>(null)
 
-  // تصحيح العمر بعد age_flagged
+  
   const [correctionBirthDate, setCorrectionBirthDate] = useState('')
   const [correctionGuardianEmail, setCorrectionGuardianEmail] = useState('')
   const [correctionLoading, setCorrectionLoading] = useState(false)
   const [correctionError, setCorrectionError] = useState('')
   const [correctionSent, setCorrectionSent] = useState(false)
 
-  // ---------- حفظ الملف الشخصي (حقيقي الآن — PATCH /users/me) ----------
+
   const [savingProfile, setSavingProfile] = useState(false)
   const [profileSaveError, setProfileSaveError] = useState('')
 
-  // ---------- تغيير كلمة المرور (عبر OTP بما إنه لا يوجد endpoint مباشر) ----------
+  
   type PwStep = 'idle' | 'otp' | 'newpass'
   const [pwStep, setPwStep] = useState<PwStep>('idle')
   const [pwCode, setPwCode] = useState('')
@@ -109,7 +109,7 @@ export default function Profile() {
   const [pwCooldown, setPwCooldown] = useState(0)
   const [pwSuccess, setPwSuccess] = useState(false)
 
-  // ---------- حذف/إغلاق الحساب (DELETE /auth/account) ----------
+  
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [deleteReason, setDeleteReason] = useState('')
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
@@ -139,7 +139,7 @@ export default function Profile() {
   const loadLatestKycReason = () => {
     kycService.getMyLatestRequest()
       .then((latest) => setLatestRejectionReason(latest?.reviewDecisionReason || null))
-      .catch(() => setLatestRejectionReason(null)) // فشل صامت — التفصيل غير حرج لعرض الصفحة
+      .catch(() => setLatestRejectionReason(null)) 
   }
 
   useEffect(() => {
@@ -162,7 +162,7 @@ export default function Profile() {
   const isInstructor = backendRole === 'Instructor'
   const mfaMandatory = isInstructor
 
-  // ---------- حفظ الملف الشخصي (PATCH /users/me) ----------
+  
   const handleSave = async () => {
     setProfileSaveError('')
     setSavingProfile(true)
@@ -171,7 +171,7 @@ export default function Profile() {
         full_name: name.trim(),
         phone: phone.trim() || undefined,
         bio: bio.trim() || undefined,
-        // تاريخ الميلاد مقفول سيرفريًا بعد التحقق (KYC) — لا نرسله أصلاً بهالحالة
+        
         birth_date: kycStatus !== 'verified' && dob ? dob : undefined,
       })
       setUserName(updated.full_name || name)
@@ -179,7 +179,7 @@ export default function Profile() {
       if (updated.phone !== undefined) setUserPhone(updated.phone || '')
       if (updated.bio !== undefined) setUserBio(updated.bio || '')
       if (updated.birth_date) setUserDob(String(updated.birth_date).slice(0, 10))
-      setUserGender(gender) // ⚠️ الجندر UI محلي فقط — لا يوجد حقل جندر بموديل User بالباك
+      setUserGender(gender) 
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
     } catch (err) {
@@ -189,7 +189,7 @@ export default function Profile() {
     }
   }
 
-  // ---------- رفع صورة حقيقي ----------
+  
   const handleAvatarChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
@@ -260,7 +260,7 @@ export default function Profile() {
     }
   }
 
-  // ---------- KYC submit ----------
+  
   const handleKycSubmit = async () => {
     if (!idFile) {
       setKycError('الرجاء تحميل صورة الوثيقة')
@@ -275,7 +275,7 @@ export default function Profile() {
     try {
       await kycService.submitMyRequest({ idDocumentType, idDocumentFile: idFile, selfieFile })
       await loadUser()
-      setLatestRejectionReason(null) // طلب جديد قيد المراجعة — لا داعي لعرض سبب الرفض القديم
+      setLatestRejectionReason(null) 
       setIdFile(null)
       setSelfieFile(null)
     } catch (err: any) {
@@ -286,7 +286,7 @@ export default function Profile() {
     }
   }
 
-  // ---------- تصحيح العمر بعد age_flagged ----------
+  
   const handleAgeCorrectionSubmit = async () => {
     if (!correctionBirthDate) { setCorrectionError('أدخل تاريخ الميلاد الصحيح.'); return }
     if (!correctionGuardianEmail.trim()) { setCorrectionError('أدخل بريد ولي الأمر.'); return }
@@ -303,7 +303,7 @@ export default function Profile() {
     }
   }
 
-  // ---------- تغيير كلمة المرور ----------
+
   const startPwCooldown = () => {
     setPwCooldown(60)
     const iv = setInterval(() => {
@@ -350,8 +350,7 @@ export default function Profile() {
       await resetPassword(email.trim().toLowerCase(), pwCode, pwNewPass)
       setPwSuccess(true)
       setPwStep('idle')
-      // ⚠️ الباك يسحب كل الجلسات عند نجاح reset-password (session.service.js)
-      // فلازم تسجيل خروج محلي فوري حتى ما يبقى المستخدم بحالة جلسة ميتة.
+      
       setTimeout(() => { void logout() }, 2500)
     } catch (err: any) {
       const code = err?.response?.data?.error?.code
@@ -364,7 +363,7 @@ export default function Profile() {
     }
   }
 
-  // ---------- حذف/إغلاق الحساب ----------
+  
   const handleConfirmDeleteAccount = async () => {
     setDeleteError('')
     setDeleteLoading(true)

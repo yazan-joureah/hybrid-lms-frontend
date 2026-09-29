@@ -50,7 +50,7 @@ export interface QuizFormPayload {
     questions: QuizQuestion[]
 }
 
-// ---------- Student-facing shapes (بدون كشف الإجابات الصحيحة) ----------
+
 export interface StudentQuizSummary {
     _id: string
     title: string
@@ -130,7 +130,7 @@ export const quizService = {
         await API.post(`/quizzes/${quizId}/publish`)
     },
 
-    // ---------- Admin / معاينة للقراءة فقط ----------
+    // ---------- Admin 
     listForCourseAdmin: async (courseId: string): Promise<Quiz[]> => {
         const res = await API.get(`/quizzes/admin/course/${courseId}`)
         return res.data?.data?.quizzes || []

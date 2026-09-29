@@ -10,8 +10,7 @@ interface Options {
     onSessionEnded?: () => void
 }
 
-// يستخدم فقط من طرف الطالب (بعد نجاح joinSession والحصول على joinToken)
-// للاستماع للحظة قفل/فتح المحاضر لدخول الطلاب أثناء وجوده داخل الحصة.
+
 export function useLiveSessionSocket({ joinToken, onAccessChanged, onSessionEnded }: Options) {
     const socketRef = useRef<Socket | null>(null)
     const callbackRef = useRef(onAccessChanged)

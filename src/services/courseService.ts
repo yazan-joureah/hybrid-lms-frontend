@@ -302,8 +302,7 @@ export const courseService = {
         return res.data
     },
 
-    // Returns a signed stream ticket URL for <video>/<embed> without exposing the Access Token.
-    // The ticket is obtained via a separate endpoint that requires normal Authorization header.
+    
     getContentFileUrl: async (courseId: string, contentId: string): Promise<string> => {
         const res = await API.get(`/courses/${courseId}/content/${contentId}/stream-ticket`)
         const ticket = res.data?.data?.stream_ticket
@@ -323,7 +322,7 @@ export const courseService = {
         return res.data?.data?.courses || []
     },
 
-    /** GET /admin/courses?status=&page=&limit= — كل الكورسات (مو بس pending) */
+    
     getAllCoursesForAdmin: async (params: AdminCourseListParams = {}): Promise<AdminCourseListResult> => {
         const res = await API.get('/admin/courses', { params })
         const data = res.data?.data

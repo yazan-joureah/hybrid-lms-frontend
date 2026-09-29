@@ -19,7 +19,7 @@ const REFUND_STATUS_LABELS: Record<RefundStatus, { label: string; color: string 
     rejected: { label: 'رُفض الاسترداد', color: '#f87171' },
 }
 
-// عنصر مستقل (بدون page-wrapper) عشان ينلصق داخل تبويب البروفايل مباشرة
+
 export function StudentPaymentsPanel() {
     const { success, error: toastError } = useToast()
     const [payments, setPayments] = useState<Payment[]>([])

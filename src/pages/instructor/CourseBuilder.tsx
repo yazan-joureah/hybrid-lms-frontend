@@ -17,15 +17,14 @@ export default function CourseBuilder() {
   const [showCreate, setShowCreate] = useState(false)
   const [previewId, setPreviewId] = useState<string | null>(null)
 
-  // ✅ يزامن التحديد المحلي مع أي رابط خارجي يوصل بـ ?courseId=... (مثلاً
-  // زر "إدارة الحصة" بلوحة تحكم المدرّس)، حتى لو الصفحة كانت مفتوحة أصلاً
+  
   useEffect(() => {
     if (courseIdFromQuery) setSelectedId(courseIdFromQuery)
   }, [courseIdFromQuery])
 
   const handleSelect = (courseId: string) => {
     setSelectedId(prev => (prev === courseId ? null : courseId))
-    // اختيار يدوي من القائمة يُلغي أي تبويب/كورس مفروض جاي من رابط خارجي
+    
     if (searchParams.toString()) setSearchParams({}, { replace: true })
   }
 

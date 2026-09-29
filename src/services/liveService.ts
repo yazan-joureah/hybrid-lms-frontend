@@ -63,7 +63,7 @@ export interface CourseAttendanceSummary {
 }
 
 export const liveService = {
-    // ---------- عام (طالب + محاضر) ----------
+    
     getSessions: async (params?: { courseId?: string }): Promise<LiveSession[]> => {
         const res = await API.get('/live/sessions', { params })
         return res.data?.data?.sessions || []
@@ -74,7 +74,7 @@ export const liveService = {
         return res.data?.data?.session || null
     },
 
-    // ---------- المحاضر ----------
+   
     createSession: async (courseId: string, payload: LiveSessionFormPayload, confirmConflict?: boolean): Promise<void> => {
         const body: Record<string, unknown> = {
             courseId,

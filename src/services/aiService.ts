@@ -25,7 +25,7 @@ export interface AIInstructorSessionResult {
 }
 
 export const aiService = {
-    // ---------- الطالب (UC-AI-01/02/03) ----------
+    
     startStudentSession: async (courseId: string): Promise<AIStudentSessionResult> => {
         const res = await API.post(`/ai/courses/${courseId}/student/session`)
         return res.data?.data
@@ -41,7 +41,7 @@ export const aiService = {
         return res.data?.data?.messages || []
     },
 
-    // ---------- المحاضر (UC-AI-04/05/06) ----------
+    
     startInstructorSession: async (courseId: string): Promise<AIInstructorSessionResult> => {
         const res = await API.post(`/ai/courses/${courseId}/instructor/session`)
         return res.data?.data

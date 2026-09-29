@@ -1,4 +1,4 @@
-// src/components/cert/CertificateViewModal.tsx
+
 import type { DownloadCertificateData } from '../../services/certService'
 import { certService } from '../../services/certService'
 import './certificate-print.css'

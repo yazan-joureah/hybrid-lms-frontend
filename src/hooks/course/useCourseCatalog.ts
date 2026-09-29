@@ -44,7 +44,7 @@ export function useCourseCatalog() {
 
     useEffect(() => { fetchCourses() }, [fetchCourses])
 
-    // أي تغيير بالفلاتر (غير الصفحة نفسها) يرجّع الصفحة للأولى
+    
     useEffect(() => { setPage(1) }, [debouncedSearch, category, courseType, sortBy])
 
     const clearFilters = () => {

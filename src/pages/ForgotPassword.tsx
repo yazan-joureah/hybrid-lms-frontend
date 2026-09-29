@@ -41,8 +41,7 @@ export default function ForgotPassword() {
       setTimer(60)
       startTimer()
     } catch (err) {
-      // الباك بيرجع نفس الرسالة سواء الإيميل موجود أو لأ (لأسباب أمنية)،
-      // فبنعرض أي خطأ فعلي بس (شبكة، سيرفر...) وبنكمل بشكل طبيعي غير هيك
+      
       setOtpError(getErrorMessage(err))
     } finally {
       setLoading(false)
@@ -50,9 +49,7 @@ export default function ForgotPassword() {
   }
 
 
-  // ما في endpoint مستقل للتحقق من الرمز لحاله بالباك — التحقق الفعلي بيصير
-  // مع إرسال كلمة المرور الجديدة بخطوة newpass. هون بس منتأكد إنه المستخدم
-  // دخل 6 أرقام قبل ما ينتقل.
+  
   const handleContinueToNewPass = () => {
     if (code.length !== 6) {
       setOtpError('أدخل الرمز المكوّن من 6 أرقام كاملاً')
@@ -77,7 +74,7 @@ export default function ForgotPassword() {
       await resetPassword(email.trim().toLowerCase(), code, newPass)
       setStep('success')
     } catch (err: any) {
-      // نفس منطق كود صاحبك بالضبط: يشيك على كود الخطأ (INVALID_CODE / CODE_EXPIRED / TOO_MANY_ATTEMPTS)
+      
       const errorCode = err?.response?.data?.error?.code
       if (errorCode === 'INVALID_CODE' || errorCode === 'CODE_EXPIRED' || errorCode === 'TOO_MANY_ATTEMPTS') {
         setStep('otp')

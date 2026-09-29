@@ -52,7 +52,7 @@ export default function InstructorDashboard() {
 
   const goToLiveTab = () => {
     if (selectedCourseId) routerNavigate(COURSE_BUILDER_TAB_PATH(selectedCourseId, 'live'))
-    else navigate('course-builder') // احتياط نظري — هذا الزر لا يظهر أصلاً بدون كورس محدد
+    else navigate('course-builder') 
   }
 
   const upcomingSessions = useMemo(

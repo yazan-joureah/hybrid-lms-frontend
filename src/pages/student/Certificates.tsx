@@ -30,7 +30,7 @@ export default function Certificates() {
       setViewData(data)
       setIsModalOpen(true)
     } catch {
-      // ممكن نضيف toast هون لو حابب
+      
     } finally {
       setOpeningCourseId(null)
     }

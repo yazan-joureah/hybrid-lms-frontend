@@ -14,7 +14,7 @@ export function getUserProfilePictureUrl(userId?: string | null): string | null 
     return `${BASE_URL}/users/${userId}/profile-picture`
 }
 
-// onError handler موحّد لأي <img> بدل تكرار نفس الكود بكل صفحة
+
 export function handleImageFallback(e: React.SyntheticEvent<HTMLImageElement>) {
     const target = e.currentTarget
     target.onerror = null

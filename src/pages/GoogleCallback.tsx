@@ -5,9 +5,7 @@ import EdujarLogo from '../components/EdujarLogo'
 
 type LocalStep = 'processing' | 'birth-date' | 'link-password' | 'guardian-email' | 'error'
 
-// نفس منطق isMinor المستخدم في Register.tsx حرفياً — لا سبب لاستيراده من
-// مكان مشترك حالياً بما أن كل صفحة مستقلة تماماً (لا Context مشترك لهذا
-// الحساب المنطقي البسيط)، تفادياً لإعادة هيكلة غير ضرورية لأجل دالة سطرين.
+
 function isMinor(dob: string): boolean {
   if (!dob) return false
   const birthDate = new Date(dob)
@@ -35,10 +33,7 @@ export default function GoogleCallback() {
 
   const minor = isMinor(birthDate)
 
-  // UX ONLY — الفرض الأمني الفعلي في oauth.service.js
-  // (confirmGoogleRegistration → MINOR_CANNOT_BE_INSTRUCTOR). هنا الدور
-  // وتاريخ الميلاد بنفس الشاشة، فالتصحيح التلقائي الفوري ممكن وأنسب من
-  // مجرد تعطيل الخيار — يمنع إرسال طلب مرفوض للسيرفر أصلاً.
+  
   useEffect(() => {
     if (minor && role === 'Instructor') setRole('Student')
   }, [minor, role])
@@ -75,7 +70,7 @@ export default function GoogleCallback() {
           setPendingToken(result.token)
           setStep('link-password')
         } else if (result.kind === 'mfa_required') {
-          // التحقق الثنائي منفصل بصفحة اللوجن — بنرجعه هناك برسالة توضيحية
+          
           setError('هالحساب مفعّل عليه تحقق ثنائي. رجاءً سجّل دخولك من صفحة تسجيل الدخول العادية لإتمام التحقق.')
           setStep('error')
         }

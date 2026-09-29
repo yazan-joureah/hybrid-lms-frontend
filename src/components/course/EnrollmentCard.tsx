@@ -17,9 +17,9 @@ export function EnrollmentCard({ enrollment, progressPercentage, unavailable, on
     const isCancelled = enrollment.status === 'cancelled'
     const isCompleted = enrollment.status === 'completed'
     const isActive = enrollment.status === 'active'
-    // إلغاء ذاتي مباشر: كورس مجاني فعّال، أو أي كورس لسا بانتظار الدفع
+    
     const canSelfCancel = (isActive && course?.course_type === 'free') || isPendingPayment
-    // كورس مدفوع فعّال → لازم يمر عبر طلب استرداد بدل الإلغاء المباشر
+   
     const canRequestRefund = isActive && course?.course_type === 'paid'
 
     return (

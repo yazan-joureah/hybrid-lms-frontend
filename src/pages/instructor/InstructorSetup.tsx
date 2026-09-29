@@ -9,9 +9,7 @@ export default function InstructorSetup() {
     const { refreshUser, logout, navigate, mfaEnabled, kycStatus, instructorSetupIncomplete } = useNav()
     const { setupMfa, confirmMfa } = useAuthApi()
 
-    // ✅ الخطوة الحالية مُشتقّة من الحالة الحقيقية القادمة من الباك اند،
-    // مش من قيمة ثابتة — هذا يحل مشكلة "الرجوع لأول خطوة" بعد أي remount
-    // (تسجيل دخول جديد، أو حتى إعادة تحميل الصفحة).
+   
     const [step, setStep] = useState<1 | 2>(mfaEnabled ? 2 : 1)
 
     // MFA state
@@ -31,17 +29,14 @@ export default function InstructorSetup() {
 
     const [error, setError] = useState<string>('')
 
-    // ✅ إذا صار الإعداد مكتمل فعليًا (مثلاً الأدمن وافق على KYC بينما
-    // الصفحة كانت مفتوحة بتاب قديم)، ينتقل تلقائيًا للداشبورد بدل ما يضل
-    // واقف هون بدون داعي.
+    
     useEffect(() => {
         if (!instructorSetupIncomplete) {
             navigate('instructor-dashboard')
         }
     }, [instructorSetupIncomplete, navigate])
 
-    // ✅ يبقي step متزامن لو mfaEnabled تغيّرت من مصدر خارجي (مثلاً refreshUser
-    // منادى من مكان تاني بالتطبيق)
+    
     useEffect(() => {
         if (mfaEnabled) {
             setMfaVerified(true)
@@ -115,9 +110,7 @@ export default function InstructorSetup() {
 
             await API.post('/kyc/requests', formData)
 
-            // ✅ ما منخزّن "تم الإرسال" بـ state محلي منفصل — بنعتمد فورًا على
-            // refreshUser() لجيب kyc_status الحقيقي ('review_pending') من
-            // الباك اند، عشان يضل متزامن حتى لو الصفحة انعمل remount بعدين.
+            
             await refreshUser()
         } catch (err: any) {
             const code = err?.response?.data?.error?.code
@@ -127,8 +120,7 @@ export default function InstructorSetup() {
         }
     }
 
-    // ✅ زر "تحقق من الحالة" — يسمح للمدرّس يتأكد يدويًا إذا الأدمن وافق،
-    // بدون ما يحتاج يعمل logout/login من جديد.
+    
     const handleCheckStatus = async () => {
         setCheckingStatus(true)
         try {
@@ -235,8 +227,7 @@ export default function InstructorSetup() {
                         <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>🪪 التحقق من الهوية (KYC)</h3>
 
                         {kycAwaitingReview ? (
-                            // ✅ الحالة الناقصة سابقًا: طلب مُرسَل فعلًا وبانتظار الأدمن —
-                            // ما بنعيد إظهار فورم الرفع، وبنوضح الحالة بدل ما "يضيع" المستخدم
+                            
                             <div style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 10, padding: 16 }}>
                                 <p style={{ color: '#fbbf24', fontWeight: 600, marginBottom: 6, fontSize: 13.5 }}>
                                     ⏳ طلبك قيد المراجعة

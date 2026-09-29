@@ -14,8 +14,7 @@ import type { LiveSession } from '../../services/liveService'
 const extractCourseId = (field?: string | { _id: string; title?: string } | null): string | null =>
   field ? String(typeof field === 'object' ? field._id : field) : null
 
-// عدّاد تنازلي حقيقي — يُعاد حسابه كل ثانية من Date.now() الفعلي بدل ما
-// يكون state ثابت ينقص وحده بدون أي علاقة بالوقت الحقيقي (كان هيك بالنسخة القديمة).
+
 function useCountdownTo(targetIso: string | null) {
   const [remainingMs, setRemainingMs] = useState(0)
 
@@ -43,10 +42,7 @@ export default function StudentDashboard() {
   const { sessions, loading: sessionsLoading } = useMyLiveSessions()
   const { activeCertificates, loading: certsLoading } = useMyCertificates()
 
-  // ✅ report/me بيرجع courseId فقط، بس مسار تفاصيل الكورس عندنا مبني على
-  // enrollmentId (/my-courses/:enrollmentId). فبنجيب خريطة courseId -> enrollmentId
-  // مرّة وحدة من نفس endpoint المستخدم أصلاً بصفحة "كورساتي"، ونستخدمها هون
-  // بس للتوجيه — بلا أي تكرار لمنطق التقدّم (هذا يبقى حصراً من report/me).
+ 
   const [enrollmentIdByCourseId, setEnrollmentIdByCourseId] = useState<Record<string, string>>({})
 
   useEffect(() => {
@@ -62,12 +58,12 @@ export default function StudentDashboard() {
   const goToCourse = useCallback((courseId: string) => {
     const enrollmentId = enrollmentIdByCourseId[courseId]
     if (enrollmentId) routerNavigate(MY_COURSES_DETAIL_PATH(enrollmentId))
-    else navigate('my-courses') // احتياط: لو الخريطة لسا ما وصلت أو الكورس مش موجود فيها
+    else navigate('my-courses') 
   }, [enrollmentIdByCourseId, routerNavigate, navigate])
 
   const pad = (n: number) => String(n).padStart(2, '0')
 
-  // ---------- مقاييس أعلى الصفحة (كلها من بيانات حقيقية) ----------
+  
   const activeCoursesCount = summary?.courses.filter(c => c.enrollmentStatus === 'active').length ?? 0
   const totalEnrolledCount = summary?.courses.length ?? 0
 
@@ -100,7 +96,7 @@ export default function StudentDashboard() {
     },
   ]
 
-  // ---------- الحصة المباشرة القادمة/الجارية (من useMyLiveSessions الحقيقي) ----------
+  
   const relevantSessions = useMemo(
     () => sessions.filter(s => s.status === 'scheduled' || s.status === 'ongoing'),
     [sessions]
@@ -116,7 +112,7 @@ export default function StudentDashboard() {
     return match?.courseTitle || 'كورس'
   }
 
-  // ---------- الجدول الأسبوعي (حصص مباشرة حقيقية خلال 7 أيام القادمة فقط) ----------
+ 
   const weekSessions = useMemo(() => {
     const weekAheadMs = Date.now() + 7 * 24 * 60 * 60 * 1000
     return relevantSessions

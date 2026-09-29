@@ -69,8 +69,5 @@ export const NavContext = createContext<NavContextType>({
 
 export const useNav = () => useContext(NavContext)
 
-// مفتاح sessionStorage لتمرير التوكن من Login.tsx (بعد فشل تسجيل الدخول
-// بسبب GUARDIAN_PENDING) لصفحة GuardianManage — نفس نمط
-// CHECKOUT_ENROLLMENT_KEY / SELECTED_ENROLLMENT_KEY المستخدم بالمشروع،
-// لأن NavContext ما بيدعم route params حقيقية.
+
 export const GUARDIAN_MANAGE_TOKEN_KEY = 'guardian_manage_token_pending'

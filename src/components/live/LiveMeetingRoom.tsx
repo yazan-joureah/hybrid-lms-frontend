@@ -67,11 +67,11 @@ export function LiveMeetingRoom({ session, role, userName, userEmail, onLeave }:
     const [started, setStarted] = useState(false)
     const [sessionEnded, setSessionEnded] = useState(false)
 
-    // ---------- طالب: التوكن الخاص بالانضمام + إشعار القفل ----------
+    
     const [joinToken, setJoinToken] = useState<string | null>(null)
     const [lockedNotice, setLockedNotice] = useState(false)
 
-    // ---------- محاضر: حالة قفل/فتح دخول الطلاب ----------
+    
     const [studentsAllowed, setStudentsAllowed] = useState(Boolean(session.studentsAllowed))
     const [togglingAccess, setTogglingAccess] = useState(false)
     const [endingSession, setEndingSession] = useState(false)
@@ -81,7 +81,7 @@ export function LiveMeetingRoom({ session, role, userName, userEmail, onLeave }:
         return () => { mountedRef.current = false }
     }, [])
 
-    // ---------- تفكيك جلسة Jitsi فقط (بدون قطع اتصال الـ socket) ----------
+    
     const disposeJitsi = useCallback(() => {
         const api = apiRef.current
         if (!api) return
@@ -93,9 +93,7 @@ export function LiveMeetingRoom({ session, role, userName, userEmail, onLeave }:
         if (mountedRef.current) { setJoined(false); setStarted(false) }
     }, [])
 
-    // ✅ استماع الطالب للحظة قفل/فتح المحاضر لدخول الطلاب — يبقى نشطًا طوال بقاء
-    // الطالب داخل الصفحة، بغض النظر عن حالة Jitsi نفسها، ليتمكن من معرفة لحظة
-    // إعادة الفتح حتى لو طُرد للتو.
+   
     useLiveSessionSocket({
         joinToken: role === 'student' ? joinToken : null,
         onAccessChanged: (allowed) => {
@@ -103,11 +101,11 @@ export function LiveMeetingRoom({ session, role, userName, userEmail, onLeave }:
                 setLockedNotice(false)
             } else {
                 setLockedNotice(true)
-                disposeJitsi() // طرد فوري من الغرفة الفعلية
+                disposeJitsi() 
             }
         },
         onSessionEnded: () => {
-            // عند انتهاء المحاضرة من قبل المحاضر
+            
             setSessionEnded(true)
             disposeJitsi()
             toastError('انتهت المحاضرة من قبل المحاضر.')
@@ -191,8 +189,7 @@ export function LiveMeetingRoom({ session, role, userName, userEmail, onLeave }:
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [role, session._id, session.meetingLink, userName, userEmail, toastError])
 
-    // ✅ انضمام تلقائي وفوري للمحاضر — هو ملزم يدخل أول واحد بما إنه الطلاب أصلاً
-    // مقفول عليهم الباب افتراضيًا لحد ما يفتحه هو بنفسه.
+    
     useEffect(() => {
         if (role === 'instructor') void handleJoinSession()
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -200,7 +197,7 @@ export function LiveMeetingRoom({ session, role, userName, userEmail, onLeave }:
 
     useEffect(() => () => disposeJitsi(), [disposeJitsi])
 
-    // ---------- محاضر: فتح/قفل دخول الطلاب ----------
+    
     const handleToggleAccess = async () => {
         setTogglingAccess(true)
         try {
@@ -215,7 +212,7 @@ export function LiveMeetingRoom({ session, role, userName, userEmail, onLeave }:
         }
     }
 
-    // ---------- محاضر: إنهاء المحاضرة للجميع ----------
+   
     const handleEndSession = async () => {
         if (endingSession) return
         setEndingSession(true)
@@ -224,7 +221,7 @@ export function LiveMeetingRoom({ session, role, userName, userEmail, onLeave }:
             toastSuccess('تم إنهاء المحاضرة بنجاح.')
             setSessionEnded(true)
             disposeJitsi()
-            // لا نغادر الصفحة فوراً، بل نعرض رسالة انتهاء
+            
         } catch (err) {
             toastError(getErrorMessage(err))
         } finally {
@@ -232,16 +229,15 @@ export function LiveMeetingRoom({ session, role, userName, userEmail, onLeave }:
         }
     }
 
-    // ---------- مغادرة الحصة ----------
+    
     const handleLeaveClick = async () => {
-        // ✅ المحاضر آخر واحد يطلع: قفل الباب تلقائيًا قبل خروجه المقصود، فما
-        // حدا يضل بالحصة بدون مشرف — وهاد بيطرد فورًا أي طالب موجود فعليًا.
+        
         if (role === 'instructor' && studentsAllowed) {
             try { await liveService.toggleStudentsAccess(session._id, false) } catch { /* best effort */ }
         }
         try { await liveService.leaveSession(session._id) } catch { /* لا نمنع الخروج عند فشل تسجيل المغادرة */ }
         disposeJitsi()
-        setJoinToken(null) // إنهاء اتصال الـ socket فعليًا عند الخروج المقصود فقط
+        setJoinToken(null) 
         onLeave()
     }
 

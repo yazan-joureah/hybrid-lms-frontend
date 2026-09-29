@@ -6,7 +6,7 @@ import { payService, type Payment } from '../../../services/payService'
 import { getErrorMessage } from '../../../utils/errorMessages'
 
 const POLL_INTERVAL_MS = 2000
-const MAX_POLLS = 15 // ~30 ثانية — عادة تأكيد الدفع بالباك (عبر webhook Stripe الموقّع) بيوصل خلال ثوانٍ
+const MAX_POLLS = 15 
 
 type Phase = 'verifying' | 'paid' | 'pending' | 'failed' | 'error'
 
@@ -14,10 +14,7 @@ interface Props {
     paymentId: string | null
 }
 
-// ⚠️ هاي الصفحة تتحقق من حالة الدفع عبر polling على GET /pay/payments/:id
-// فقط — ما بترسل أي نداء يزعم "الدفع تم" من الفرونت للباك (زي
-// /payments/webhook يلي كان بالنسخة التانية). تأكيد الدفع الحقيقي بصير
-// حصرياً عبر webhook موقّع من Stripe مباشرة للباك، بمعزل تام عن هاي الصفحة.
+
 export default function PaymentSuccess({ paymentId }: Props) {
     const { navigate } = useNav()
     const { error: toastError } = useToast()

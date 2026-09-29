@@ -38,9 +38,7 @@ export function AdminAccountsList({ currentUserId, actorRole }: Props) {
 
     const totalPages = Math.max(1, Math.ceil(total / pageSize))
 
-    // ⚠️ يعكس بالضبط منطق assertCanManageTarget بالباك اند (manageAccounts.service.js):
-    // ما حدا فيه يدير حساب SuperAdmin، وما حدا غير SuperAdmin فيه يدير حساب Admin،
-    // وما حدا فيه يدير حسابه هو نفسه من هالصفحة.
+   
     const canManage = (account: AdminAccountListItem) => {
         if (account._id === currentUserId) return false
         if (account.role === 'SuperAdmin') return false

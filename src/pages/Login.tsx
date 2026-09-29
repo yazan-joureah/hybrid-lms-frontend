@@ -161,14 +161,14 @@ export default function Login() {
           setError('حسابك بانتظار موافقة ولي الأمر. تحقق من بريدك الإلكتروني للتفاصيل.')
         }
       } else if (result.requiresEmailVerification) {
-        // الحالة الجديدة: تفعيل البريد الإلكتروني
+        
         setVerifyEmailStep(true)
       } else if (result.user) {
         applyLoggedInUser(result.user)
       }
     } catch (err) {
       const message = getErrorMessage(err)
-      // التحقق مما إذا كان الخطأ هو "الحساب غير مفعل" ليعرض واجهة التفعيل
+      
       if (message.includes('تحقق') || message.includes('غير مفعل')) {
         setVerifyEmailStep(true)
       } else {
@@ -179,7 +179,7 @@ export default function Login() {
     }
   }
 
-  // دالة التحقق من رمز البريد
+  
   const handleVerifyEmail = async () => {
     if (verifyEmailCode.length !== 6) {
       setVerifyEmailError('أدخل الرمز المكوّن من 6 أرقام كاملاً')
@@ -206,7 +206,7 @@ export default function Login() {
     }
   }
 
-  // دالة إعادة إرسال الرمز
+  
   const handleResend = async () => {
     if (cooldown > 0) return
     setLoading(true)

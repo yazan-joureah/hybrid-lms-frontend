@@ -38,13 +38,7 @@ export interface DownloadCertificateData {
 }
 
 export const certService = {
-    /**
-     * Public endpoint — NO cookies sent. This page is opened by anonymous
-     * third parties scanning a QR code; it must never require or send
-     * credentials, both for correctness (this exact CORS bug) and for
-     * security (least privilege — no reason to expose session cookies to
-     * a purely public, unauthenticated verification call).
-     */
+    
     async verifyCertificate(certificateId: string): Promise<VerifyCertificateResponse> {
         const response = await axios.get<{ success: boolean; data: VerifyCertificateResponse }>(
             `${BASE_URL}/certificates/verify/${certificateId}`,
@@ -53,9 +47,7 @@ export const certService = {
         return response.data.data
     },
 
-    /**
-     * Authenticated endpoint to retrieve all active/issued certificates for the student.
-     */
+    
     async getMyCertificates(): Promise<MyCertificateItem[]> {
         const response = await api.get<{ success: boolean; data: MyCertificateItem[] }>(
             `/certificates/my-certificates`
@@ -63,9 +55,7 @@ export const certService = {
         return response.data.data
     },
 
-    /**
-     * Authenticated endpoint to fetch printable data, QR image, and VC-JWT for a specific course.
-     */
+   
     async downloadCertificate(courseId: string): Promise<DownloadCertificateData> {
         const response = await api.get<{ success: boolean; data: DownloadCertificateData }>(
             `/certificates/download/${courseId}`
@@ -73,9 +63,7 @@ export const certService = {
         return response.data.data
     },
 
-    /**
-     * Downloads the raw VC-JWT as a standard Open Badges 3.0 / W3C Verifiable Credential file (.json).
-     */
+    
     downloadBadgeJwtFile(filename: string, jwtToken: string): void {
         const blob = new Blob([jwtToken], { type: 'application/vc+jwt' })
         const url = URL.createObjectURL(blob)

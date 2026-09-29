@@ -14,7 +14,7 @@ export default function AdminSetup() {
     const [error, setError] = useState('')
     const [backupCodes, setBackupCodes] = useState<string[]>([])
 
-    // ✅ بمجرد اكتمال الإعداد (MFA مفعّل)، ينتقل تلقائيًا للوحة التحكم
+    
     useEffect(() => {
         if (!adminSetupIncomplete) {
             navigate('admin-dashboard')

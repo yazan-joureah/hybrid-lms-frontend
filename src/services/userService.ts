@@ -16,9 +16,9 @@ export interface UserProfile {
 
 export interface UpdateProfilePayload {
     full_name?: string
-    phone?: string   // '' مسموحة لمسح الحقل (حسب updateProfileSchema)
-    bio?: string      // '' مسموحة لمسح الحقل
-    birth_date?: string // ISO: YYYY-MM-DD — يُرفض لو مؤكّد KYC (BIRTH_DATE_LOCKED)
+    phone?: string  
+    bio?: string      
+    birth_date?: string 
 }
 
 export interface UpdateProfileResult {
@@ -43,7 +43,7 @@ export const userService = {
         return res.data?.data
     },
 
-    /** PATCH /users/me — تحديث جزئي، كل الحقول اختيارية */
+   
     updateMe: async (updates: UpdateProfilePayload): Promise<UpdateProfileResult> => {
         const res = await API.patch('/users/me', updates)
         return res.data?.data
@@ -58,30 +58,23 @@ export const userService = {
         })
     },
 
-    /** GET /users/:userId/profile-picture — رابط مباشر (streaming، مو JSON) */
+    
     getProfilePictureUrl: (userId: string): string => {
         return `${BASE_URL}/users/${userId}/profile-picture`
     },
 
-    /**
-     * DELETE /auth/account — طلب حذف ذاتي.
-     * Student → يُحذف فورًا (immediate=true).
-     * Instructor/Admin → يدخل بانتظار موافقة SuperAdmin (immediate=false).
-     * ⚠️ افتراض غير مؤكد: شكل الـ response هون مبني على توقيع
-     * accountDeletionRequest.service.js (requestOwnAccountDeletion) لأنه
-     * الـ controller المسؤول عن هاد الراوت ما انرفع لسا — لازم تأكيد.
-     */
+    
     requestOwnAccountDeletion: async (reason: string): Promise<AccountDeletionResult> => {
         const res = await API.delete('/auth/account', { data: { reason } })
         return res.data?.data
     },
 
-    /** POST /auth/account/restore/request — خطوة 1، بدون auth */
+   
     requestAccountRestore: async (email: string): Promise<void> => {
         await API.post('/auth/account/restore/request', { email })
     },
 
-    /** POST /auth/account/restore/confirm — خطوة 2، بدون auth */
+    
     confirmAccountRestore: async (email: string, code: string): Promise<void> => {
         await API.post('/auth/account/restore/confirm', { email, code })
     },

@@ -8,8 +8,7 @@ interface YellowWarning {
     discrepancyYears: number
 }
 
-// رسائل مخصّصة حسب outcome الفعلي — بدل رسالة "تم القبول" الموحّدة يلي
-// كانت صحيحة أيام outcome كانت بس verified/age_flagged
+
 const OUTCOME_MESSAGES: Record<string, { text: string; tone: 'success' | 'warning' }> = {
     verified: { text: 'تم قبول طلب التوثيق بنجاح.', tone: 'success' },
     age_flagged: { text: 'تم تعليق التوثيق مؤقتاً بسبب تعارض بالعمر — الحساب نفسه يبقى نشطاً.', tone: 'warning' },

@@ -41,7 +41,7 @@ import AdminRefundReview from './pages/payments/admin/AdminRefundReview'
 import PrivacyPolicy from './pages/PrivacyPolicy'
 import InstructorAIAssistant from './pages/instructor/AIAssistant'
 
-// --------- Route wrappers لاستخراج params من الـ URL الحقيقي ----------
+
 function VerifyCertificateRoute() {
   const { certificateId } = useParams<{ certificateId: string }>()
   if (!certificateId) return <Navigate to="/" replace />
@@ -55,18 +55,14 @@ function AdminActivateRoute() {
 
 function GuardianManageRoute() {
   const [params] = useSearchParams()
-  // التوكن ممكن يجي من رابط الإيميل مباشرة (?token=...) عند فتح الصفحة أول
-  // مرة، أو يكون محفوظ بـ sessionStorage لو المستخدم وصلها بعد محاولة
-  // تسجيل دخول فاشلة (GUARDIAN_PENDING) داخل التطبيق نفسه.
+
   const token = params.get('token') || sessionStorage.getItem(GUARDIAN_MANAGE_TOKEN_KEY) || ''
   return <GuardianManage token={token} />
 }
 
 function GuardianApproveRoute() {
   const [params] = useSearchParams()
-  // بعكس GuardianManage: لا نلجأ لـ sessionStorage هنا — رابط الموافقة
-  // يصل حصراً عبر بريد ولي الأمر (?token=...)، ولا سيناريو يستدعي تمريره
-  // عبر التطبيق داخلياً كما يحصل مع GUARDIAN_PENDING عند الطالب.
+  
   const token = params.get('token') || ''
   return <GuardianApprove token={token} />
 }
@@ -89,9 +85,7 @@ const adminRestrictedPages: Page[] = [
   'admin-dashboard', 'admin-accounts', 'admin-payments', 'admin-payment-detail', 'refunds',
 ]
 
-// نفس فكرة instructorRestrictedPages تماماً — لكن للطالب المُعلَّق بـ
-// age_flagged: يُسمح له فقط بالوصول لصفحة البروفايل (لإرسال طلب تصحيح
-// العمر)، وأي محاولة وصول لأي محتوى تعليمي أو دفع تُعاد لصفحة البروفايل.
+
 const studentRestrictedPages: Page[] = [
   'student-dashboard', 'course-catalog', 'my-courses', 'live-class',
   'certificates', 'ai-assistant', 'checkout',
@@ -116,13 +110,11 @@ function AppShell() {
   const [mfaEnabled, setMfaEnabled] = useState(false)
 
   const instructorSetupIncomplete = role === 'instructor' && (!mfaEnabled || kycStatus !== 'verified')
-  // ← جديد: نفس الشكل تماماً — طالب بحالة age_flagged يُعامَل كحساب
-  // "مقفول جزئياً" بنفس أسلوب المدرّس غير المكتمل الإعداد، فرق واحد فقط:
-  // الوجهة المسموحة هنا هي /profile بدل /instructor/setup.
+  
   const studentAgeFlagged = role === 'student' && kycStatus === 'age_flagged'
   const adminSetupIncomplete = (role === 'admin' || role === 'superadmin') && !mfaEnabled
 
-  // ✅ الصفحة الحالية مشتقة من الـ URL الحقيقي، مش من state محلي
+  
   const page: Page =
     location.pathname.startsWith('/verify/')
       ? 'verify-certificate'
@@ -141,7 +133,7 @@ function AppShell() {
     return PAGE_TO_PATH['student-dashboard']
   }, [instructorSetupIncomplete, adminSetupIncomplete, studentAgeFlagged])
 
-  // ✅ نفس توقيع navigate(page) القديم تمامًا — كل الصفحات (~50 ملف) بتضل شغالة بدون أي تعديل
+  
   const navigate = useCallback((target: Page) => {
     if (instructorSetupIncomplete && instructorRestrictedPages.includes(target)) {
       routerNavigate(PAGE_TO_PATH['instructor-setup'])
@@ -169,10 +161,7 @@ function AppShell() {
   const login = useCallback((r: Role, kyc?: string, mfa?: boolean) => {
     setRoleState(r)
     setIsAuthenticated(true)
-    // نطبّق القيم الحقيقية القادمة مباشرة من استجابة تسجيل الدخول (بدل
-    // الانتظار لدورة refreshUser لاحقة من Layout مثلاً) — هذا يمنع state
-    // قديمة (mfaEnabled الافتراضية false) من التسبب بتوجيه خاطئ مؤقت
-    // لصفحة setup ثم تصحيحه تلقائياً بعد ثانية (الفليكر).
+   
     if (kyc !== undefined) setKycStatus(kyc)
     if (mfa !== undefined) setMfaEnabled(mfa)
   }, [])
@@ -232,7 +221,7 @@ function AppShell() {
           const fallbackPage = computeFallbackPage(res.user) as Exclude<Page, 'verify-certificate'>
           routerNavigate(PAGE_TO_PATH[fallbackPage], { replace: true })
         } else if (isPaymentRedirect) {
-          // المسار صحيح أصلًا (/payment/success أو /payment/cancelled) — بس منضل بنفس مكاننا
+          
         }
       } else if (googleSuccess) {
         routerNavigate('/login', { replace: true })
@@ -262,7 +251,7 @@ function AppShell() {
   const instructorRoute = (element: ReactElement) =>
     instructorSetupIncomplete ? <Navigate to="/instructor/setup" replace /> : <Layout>{element}</Layout>
 
-  // نفس فكرة instructorRoute تماماً — يُطبَّق على كل مسارات محتوى الطالب
+  
   const studentRoute = (element: ReactElement) =>
     studentAgeFlagged ? <Navigate to="/profile" replace /> : <Layout>{element}</Layout>
 

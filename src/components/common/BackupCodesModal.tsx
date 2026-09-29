@@ -7,10 +7,7 @@ interface Props {
     onDismiss: () => void
 }
 
-// ⚠️ هاي الرموز تُعرض مرة واحدة فقط من الباك (mfa.service.js:confirmTotpSetup
-// لا يخزّن النص الخام، فقط الـ hash). لا يوجد endpoint لإعادة توليدها أو
-// لاستخدامها بتسجيل الدخول حاليًا — العرض/النسخ/التحميل هون هو آخر فرصة
-// للمستخدم للاحتفاظ فيها.
+
 export function BackupCodesModal({ codes, onDismiss }: Props) {
     const [copied, setCopied] = useState(false)
     const [confirmed, setConfirmed] = useState(false)
@@ -21,7 +18,7 @@ export function BackupCodesModal({ codes, onDismiss }: Props) {
             setCopied(true)
             setTimeout(() => setCopied(false), 2000)
         } catch {
-            // بيئات بدون Clipboard API — التحميل يبقى بديل متاح
+            
         }
     }
 

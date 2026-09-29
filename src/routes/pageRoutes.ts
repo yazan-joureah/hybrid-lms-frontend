@@ -1,8 +1,7 @@
 // src/routes/pageRoutes.ts
 import type { Page } from '../context/NavContext'
 
-// خريطة Page -> path حقيقي بالـ URL.
-// ⚠️ 'verify-certificate' متعامل معها خاص (route ديناميكي /verify/:certificateId) فمش موجودة هون كـ path ثابت.
+
 export const PAGE_TO_PATH: Record<Exclude<Page, 'verify-certificate'>, string> & { 'verify-certificate'?: string } = {
     'landing': '/',
     'login': '/login',

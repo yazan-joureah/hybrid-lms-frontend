@@ -723,7 +723,7 @@ video {
   scrollbar-width: none;
 }
 
-/* ================= Auth pages (Login/Register/ForgotPassword/GoogleCallback/GuardianManage) ================= */
+
 .auth-shell {
   min-height: 100vh;
   direction: rtl;
@@ -784,7 +784,7 @@ video {
   }
 }
 
-/* خانات OTP: تتقلّص تلقائياً على الشاشات الضيقة بدل ما تكسر عرض البطاقة */
+
 .otp-input-row {
   display: flex;
   gap: 10px;
@@ -1035,14 +1035,10 @@ video {
 }
 
 
-/* ================= Select dropdown fix =================
-   <option> يُرندَر بمعزل عن theming الصفحة (backdrop-filter لا يعمل
-   عليه، والمتصفح يستخدم لوناً افتراضياً أبيض) — لازم تلوين صريح هنا،
-   ونفس ألوان --bg-card/--text المستخدمة بباقي عناصر التطبيق. */
+
 select.form-input {
   color-scheme: dark;
-  /* rgba الشفافة تبع .form-input تبقى للـ input المُغلَق نفسه، بس القائمة
-     المفتوحة بتحتاج خلفية صلبة حتى النص يكون مقروء فوقها بكل المتصفحات */
+  
   background-color: var(--bg-2);
 }
 

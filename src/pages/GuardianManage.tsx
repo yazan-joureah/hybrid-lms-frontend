@@ -17,10 +17,7 @@ const STATUS_META: Record<StatusValue, { icon: string; title: string; color: str
     expired: { icon: '⌛', title: 'انتهت صلاحية الطلب', color: 'rgba(255,255,255,0.5)' },
 }
 
-// ✅ استخراج التوكن (من ?token=... بالرابط، أو من sessionStorage بعد
-// GUARDIAN_PENDING أثناء تسجيل الدخول) صار مسؤولية GuardianManageRoute
-// بـ App.tsx عبر useSearchParams الحقيقي من react-router-dom — هاي الصفحة
-// هلق تستقبل التوكن جاهز كـ prop بدل ما تعيد الاستخراج يدويًا بنفسها.
+
 export default function GuardianManage({ token }: Props) {
     const { navigate } = useNav()
     const { guardianManageStatus, guardianManageResend, guardianManageUpdateEmail, getErrorMessage } = useAuthApi()

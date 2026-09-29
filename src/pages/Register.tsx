@@ -50,9 +50,7 @@ export default function Register() {
   const emailValid = EMAIL_RE.test(email)
   const minor = isMinor(dob)
 
-  // UX ONLY — الفرض الأمني الفعلي على السيرفر (registerSchema.refine).
-  // نكشف التعارض هنا لأن الدور يُختار بالخطوة 1 قبل معرفة تاريخ الميلاد
-  // بالخطوة 2، فلا يظهر التعارض إلا بعد إدخال DOB.
+  
   const minorInstructorConflict = minor && role === 'instructor'
 
   const strength = password.length === 0 ? 0 : password.length < 6 ? 1 : password.length < 10 ? 2 : password.match(/[A-Z]/) && password.match(/[0-9]/) ? 4 : 3

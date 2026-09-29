@@ -33,7 +33,7 @@ export interface MyLatestKycRequest {
 }
 
 export const kycService = {
-    /** POST /kyc/requests — تسليم طلب توثيق هوية من الطالب/المدرّس نفسه */
+    
     submitMyRequest: async ({ idDocumentType, idDocumentFile, selfieFile }: SubmitKycPayload): Promise<void> => {
         const formData = new FormData()
         formData.append('idDocumentType', idDocumentType)
@@ -75,7 +75,7 @@ export const kycService = {
         await API.post(`/admin/kyc/requests/${requestId}/reject`, { rejectionReason })
     },
 
-    // ---------- الطالب: تصحيح العمر بعد age_flagged ----------
+    
     requestAgeCorrection: async (birthDate: string, guardianEmail: string): Promise<void> => {
         await API.post('/kyc/age-correction', {
             birth_date: birthDate,
@@ -83,7 +83,7 @@ export const kycService = {
         })
     },
 
-    // ---------- جلب أحدث طلب KYC للمستخدم الحالي ----------
+    
     getMyLatestRequest: async (): Promise<MyLatestKycRequest | null> => {
         const res = await API.get('/kyc/my-status')
         return res.data?.data?.latestRequest || null

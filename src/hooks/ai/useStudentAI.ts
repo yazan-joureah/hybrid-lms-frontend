@@ -39,11 +39,9 @@ export function useStudentAI() {
     const [loadingHistory, setLoadingHistory] = useState(false)
     const [sending, setSending] = useState(false)
 
-    // ✅ تتبّع محلي لأي كورس تم بدء جلسته بالفعل بهذه الجلسة (Session)
-    // بالمتصفح، حتى ما ننادي startStudentSession مع كل رسالة بلا داعٍ.
+    
     const sessionStartedRef = useRef<Set<string>>(new Set())
 
-    // ---------- تحميل كورسات الطالب الفعّالة فقط ----------
     useEffect(() => {
         let cancelled = false
         setLoadingCourses(true)
@@ -66,7 +64,7 @@ export function useStudentAI() {
         sessionStartedRef.current.add(courseId)
     }, [])
 
-    // ---------- عند تبديل الكورس المختار: بدء الجلسة + تحميل السجل ----------
+    
     useEffect(() => {
         if (!selectedCourseId) return
         let cancelled = false
@@ -101,8 +99,7 @@ export function useStudentAI() {
             try {
                 result = await aiService.queryAssistant(selectedCourseId, text)
             } catch (err) {
-                // ✅ لو الباك رجّع SESSION_NOT_STARTED (مثلاً الجلسة أُغلقت بالسيرفر)
-                // نعيد بدء الجلسة ونحاول مرة واحدة إضافية فقط.
+                
                 if (getErrorCode(err) === 'SESSION_NOT_STARTED') {
                     sessionStartedRef.current.delete(selectedCourseId)
                     await ensureSession(selectedCourseId)

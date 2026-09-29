@@ -38,13 +38,11 @@ export default function MyCourses() {
   } = useEnrollmentActions()
   const [refundTarget, setRefundTarget] = useState<Payment | null>(null)
 
-  // ✅ الـ enrollment المختار هلق مشتق من الـ URL مباشرة، مش من sessionStorage.
-  // إذا الرابط بيشاور على enrollment غير صالح (ملغى/بانتظار دفع/كورس غير منشور)
-  // منرجع تلقائيًا للقائمة — نفس السلوك القديم بالضبط بس عبر الراوتر الحقيقي.
+  
   useEffect(() => {
     if (!enrollmentId || loading) return
     const found = enrollments.find(e => e._id === enrollmentId)
-    if (!found) return // لسا عم يحمّل أو الرابط خاطئ — بيتعامل معه بالعرض تحت
+    if (!found) return 
 
     const course = found.course_id
     const isValid = found.status !== 'cancelled' &&
@@ -132,7 +130,7 @@ export default function MyCourses() {
     )
   }
 
-  // ✅ الرابط فيه enrollmentId بس لسا ما لقيناه بالقائمة (مثلاً تحديث أو رابط خاطئ)
+  
   if (enrollmentId && !selected) {
     return (
       <div className="page-wrapper">

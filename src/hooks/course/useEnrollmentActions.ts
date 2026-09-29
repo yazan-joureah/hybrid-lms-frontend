@@ -11,11 +11,7 @@ export function useEnrollmentActions() {
     const [findingPaymentId, setFindingPaymentId] = useState<string | null>(null)
     const [submittingRefund, setSubmittingRefund] = useState(false)
 
-    /**
-     * إلغاء تسجيل ذاتي — يعمل فقط لكورس مجاني (active) أو كورس مدفوع
-     * لسا pending_payment. لو الباك اند رجّع REFUND_REQUIRED معناها في
-     * مبلغ فعلي مدفوع ولازم المرور عبر طلب استرداد بدل الإلغاء المباشر.
-     */
+   
     const cancelEnrollment = async (enrollmentId: string): Promise<'cancelled' | 'refund_required' | 'error'> => {
         setCancellingId(enrollmentId)
         try {
@@ -33,7 +29,7 @@ export function useEnrollmentActions() {
         }
     }
 
-    /** يلاقي الدفعة (Payment) المرتبطة بتسجيل معيّن من سجل مدفوعات الطالب. */
+    
     const findPaymentForEnrollment = async (enrollmentId: string): Promise<Payment | null> => {
         setFindingPaymentId(enrollmentId)
         try {

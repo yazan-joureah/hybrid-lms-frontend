@@ -17,13 +17,7 @@ function formatTime() {
     return new Date().toLocaleTimeString('ar', { hour: '2-digit', minute: '2-digit' })
 }
 
-/**
- * ⚠️ لا يوجد endpoint لسجلّ محادثة المحاضر بالباك اند (aiRoutes.js يملك
- * فقط GET /student/history — لا مقابل لها بجانب Instructor). المحادثة
- * هون محفوظة محلياً بالذاكرة (state) فقط، لكل كورس على حدة، وتُفرَّغ
- * عند تبديل الكورس أو تحديث الصفحة. هذا سلوك مقصود يطابق الـ API
- * الحالي، وليس نقصاً بالتنفيذ.
- */
+
 export function useInstructorAI() {
     const { error: toastError } = useToast()
 
@@ -54,7 +48,7 @@ export function useInstructorAI() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
-    // UC-AI-04 — بدء/تحديث الجلسة (SF-AI-01 تُبنى بالباك اند تلقائياً معها)
+    
     const ensureSession = useCallback(async (courseId: string) => {
         if (sessionStartedRef.current.has(courseId)) return
         setStarting(true)
@@ -66,7 +60,7 @@ export function useInstructorAI() {
         }
     }, [])
 
-    // عند تبديل الكورس المختار: بدء الجلسة (بلا تحميل سجل — غير متاح للمحاضر)
+    
     useEffect(() => {
         if (!selectedCourseId) return
         let cancelled = false
@@ -84,7 +78,7 @@ export function useInstructorAI() {
         setMessagesByCourse(prev => ({ ...prev, [courseId]: [...(prev[courseId] || []), msg] }))
     }
 
-    // UC-AI-05 (content_suggestions) أو UC-AI-06 (performance_summary)
+   
     const sendMessage = async (text: string) => {
         if (!text.trim() || !selectedCourseId || sending) return
         const courseId = selectedCourseId
@@ -104,8 +98,7 @@ export function useInstructorAI() {
             try {
                 result = await call()
             } catch (err) {
-                // ✅ نفس منطق useStudentAI: لو الجلسة انقفلت بالسيرفر، نعيد
-                // بدءها ونحاول مرة إضافية واحدة فقط.
+                
                 if (getErrorCode(err) === 'SESSION_NOT_STARTED') {
                     sessionStartedRef.current.delete(courseId)
                     await ensureSession(courseId)

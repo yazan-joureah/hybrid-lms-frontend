@@ -1,10 +1,6 @@
 
 // src/pages/GuardianApprove.tsx
-// UC-AUTH-02 — نموذج موافقة ولي الأمر الفعلي (مختلف عن GuardianManage.tsx
-// الذي يخدم الطالب فقط). لا يستدعي أي GET عند التحميل عمداً — الباك اند
-// (guardianApprovePagePlaceholder) لا يعيد بيانات حقيقية أصلاً، والتنفيذ
-// الفعلي (POST) يحدث فقط بضغطة صريحة من ولي الأمر — هذا يمنع تفعيل
-// الموافقة تلقائياً عبر ماسحات الروابط في أنظمة البريد (Prefetching).
+
 import { useState } from 'react'
 import { useNav } from '../context/NavContext'
 import { useAuthApi } from '../context/AuthApiContext'

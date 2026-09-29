@@ -1,18 +1,15 @@
 // src/config/api.ts
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios'
 
-// الآن اتصال Cross-Origin مباشر (Vercel → Render) — لا حاجة لـ Same-Origin Proxy
-// بعد ما استبدلنا Double-Submit Cookie بـ Origin Validation في الباك اند.
+
 export const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://hybrid-lms-backend.onrender.com/api/v1';
 
 const API = axios.create({
   baseURL: BASE_URL,
-  withCredentials: true, // يبعث refresh_token (HttpOnly) تلقائيًا — هذا وحده الكافي الآن
+  withCredentials: true, 
 })
 
-// ❌ حُذفت getCookie() بالكامل — ما عاد في csrf_token نقرأه أو نرسله.
-// المتصفح نفسه بيرسل هيدر Origin تلقائيًا مع كل طلب cross-site،
-// والباك اند بيتحقق منه مباشرة عبر requireTrustedOrigin — بدون أي تدخل من الفرونت.
+
 
 let isRefreshing = false
 let failedQueue: { resolve: (token: string | null) => void; reject: (err: unknown) => void }[] = []
